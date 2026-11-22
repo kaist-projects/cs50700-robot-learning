@@ -43,6 +43,7 @@ ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
 SUBJECT_POS = (0.9, 0.0, 0.15)
+SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; fully pressed is -0.004
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
 IMAGE_SIZE = 224  # OpenPi's input resolution, so frames need no resizing
@@ -254,6 +255,14 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     camera_dropped = DoneTerm(
         func=mdp.root_height_below_minimum, params={"minimum_height": -0.1, "asset_cfg": SceneEntityCfg("camera_prop")}
+    )
+    # The photo is taken: the shutter joint goes below SHUTTER_PRESSED_POS, i.e. leaves the bounds below.
+    success = DoneTerm(
+        func=mdp.joint_pos_out_of_manual_limit,
+        params={
+            "bounds": (SHUTTER_PRESSED_POS, math.inf),
+            "asset_cfg": SceneEntityCfg("camera_prop", joint_names=["shutter_joint"]),
+        },
     )
 
 

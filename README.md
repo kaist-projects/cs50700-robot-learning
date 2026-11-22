@@ -31,6 +31,7 @@ Task `Bimanual-CameraShutter-Franka`. Two fixed-base Franka Panda arms with para
 | Gripper | negative closes, zero or positive opens |
 | Observations | joint positions, hand and camera poses (world frame), shutter joint position, lens aim error (angle between the lens axis and the subject), four 224×224 RGB cameras (table, left wrist, right wrist, and the camera prop's own lens) |
 | Shutter button | prismatic joint with a return spring: 0 released, -4 mm fully pressed |
+| Success | the shutter is pressed past -3 mm (the photo is taken); the episode ends there |
 | Control rate | 20 Hz (physics 100 Hz) |
 
 Run the smoke test from the repository root:
@@ -41,7 +42,7 @@ PYTHONPATH=sim python sim/scripts/smoke_test.py                        # headles
 PYTHONPATH=sim python sim/scripts/smoke_test.py --viz kit --keep_open  # GUI window
 ```
 
-It holds both hands, presses the shutter with the right hand, prints the shutter travel, and saves camera frames to `sim/outputs/smoke/`. With `--keep_open` the app keeps running until you close the window. The GUI needs a desktop session, such as RDP into the workstation.
+It holds both hands, presses the shutter with the right hand, prints the lens aim error, the shutter travel and the success check, and saves camera frames to `sim/outputs/smoke/`. With `--keep_open` the app keeps running until you close the window. The GUI needs a desktop session, such as RDP into the workstation.
 
 ## Assets
 

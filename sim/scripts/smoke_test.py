@@ -1,7 +1,8 @@
 """Smoke test for the camera-shutter env.
 
 Holds both hands still, presses the shutter button with the right hand and lifts it again, then
-prints IK tracking error, the lens aim error, the shutter joint travel, and observation shapes. One frame per camera is
+prints IK tracking error, the lens aim error, the shutter joint travel with the success term, and
+observation shapes. One frame per camera is
 saved at the deepest press.
 
 Run from the repository root in the `isaacsim` conda env:
@@ -32,6 +33,7 @@ import torch  # noqa: E402
 import bimanual_sim  # noqa: E402
 import isaaclab.utils.math as math_utils  # noqa: E402
 from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
+from isaaclab.managers import TerminationTermCfg as DoneTerm  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam", "lens_cam")
@@ -44,7 +46,7 @@ PHASE_STEPS = 40  # 2 s at 20 Hz
 
 
 def main():
-    env = ManagerBasedRLEnv(cfg=parse_env_cfg(bimanual_sim.CAMERA_SHUTTER_TASK, num_envs=1, overrides=hydra_overrides))
+    env, success_term = make_env()
     env.reset()
 
     hold = hold_current_pose_action(env)
@@ -55,16 +57,28 @@ def main():
     above_button, into_button = shutter_press_actions(env, hold)
     step_for(env, above_button, PHASE_STEPS)
     obs = step_for(env, into_button, PHASE_STEPS)
-    pressed = shutter_position(env)
+    pressed, pressed_success = shutter_position(env), is_success(env, success_term)
     save_camera_frames(obs["policy"], Path(args_cli.out_dir))
     step_for(env, above_button, PHASE_STEPS)
-    released = shutter_position(env)
-    print(f"[smoke] shutter joint: pressed {pressed * 1e3:.1f} mm, released {released * 1e3:.1f} mm")
+    released, released_success = shutter_position(env), is_success(env, success_term)
+    print(f"[smoke] shutter joint: pressed {pressed * 1e3:.1f} mm (success {pressed_success}), "
+          f"released {released * 1e3:.1f} mm (success {released_success})")
 
     print_observation_shapes(obs["policy"])
     if args_cli.keep_open:
         hold_until_app_closes(env, hold_current_pose_action(env))
     env.close()
+
+
+def make_env() -> tuple[ManagerBasedRLEnv, DoneTerm]:
+    """Build the env with its success term taken out, as record_demos.py does, so a press does not reset it."""
+    env_cfg = parse_env_cfg(bimanual_sim.CAMERA_SHUTTER_TASK, num_envs=1, overrides=hydra_overrides)
+    success_term, env_cfg.terminations.success = env_cfg.terminations.success, None
+    return ManagerBasedRLEnv(cfg=env_cfg), success_term
+
+
+def is_success(env: ManagerBasedRLEnv, success_term: DoneTerm) -> bool:
+    return bool(success_term.func(env, **success_term.params)[0])
 
 
 def hold_until_app_closes(env: ManagerBasedRLEnv, hold: torch.Tensor) -> None:
