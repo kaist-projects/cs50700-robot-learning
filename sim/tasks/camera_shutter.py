@@ -3,12 +3,13 @@
 World frame: +x points from the arms toward the subject, +y to the left, z = 0 is the table top.
 The left arm (+y) holds the camera and the right arm (-y) presses the shutter button. Both arms
 face the table centre. Stock Isaac Lab MDP terms are used, except the lens aim error from
-common/camera.py.
+common/camera.py. The helpers after ActionsCfg build 16D actions in its order.
 """
 
 import math
 from pathlib import Path
 
+import torch
 from isaaclab_physx.physics import PhysxCfg
 
 import isaaclab.envs.mdp as mdp
@@ -16,7 +17,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
 from isaaclab.envs.mdp.actions.actions_cfg import DifferentialInverseKinematicsActionCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -31,7 +32,7 @@ from isaaclab_tasks.utils.presets import set_isaac_rtx_global_settings
 
 from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
 
-from common import camera
+from common import camera, frames
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 FRANKA_USD = ASSET_DIR / "franka_panda" / "panda_instanceable.usd"
@@ -205,6 +206,25 @@ class ActionsCfg:
     left_gripper = _gripper_action("robot_left")
     right_arm = _hand_pose_action("robot_right")
     right_gripper = _gripper_action("robot_right")
+
+
+GRIPPER_OPEN, GRIPPER_CLOSE = 1.0, -1.0
+LEFT_HAND_POSE, RIGHT_HAND_POSE = slice(0, 7), slice(8, 15)  # where each hand pose sits in the 16D action
+
+
+def compose_action(
+    left_pose: torch.Tensor, left_gripper: float, right_pose: torch.Tensor, right_gripper: float
+) -> torch.Tensor:
+    """Concatenate a 16D action in ActionsCfg order from (num_envs, 7) hand poses and gripper commands."""
+    gripper = lambda value: torch.full((left_pose.shape[0], 1), value, device=left_pose.device)  # noqa: E731
+    return torch.cat([left_pose, gripper(left_gripper), right_pose, gripper(right_gripper)], dim=-1)
+
+
+def hold_current_pose_action(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """16D action that keeps both hands where they are, with both grippers open."""
+    left_pose = frames.body_pose_in_base(env.scene["robot_left"], "panda_hand")
+    right_pose = frames.body_pose_in_base(env.scene["robot_right"], "panda_hand")
+    return compose_action(left_pose, GRIPPER_OPEN, right_pose, GRIPPER_OPEN)
 
 
 @configclass

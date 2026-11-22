@@ -29,14 +29,21 @@ from pathlib import Path  # noqa: E402
 import imageio.v3 as iio  # noqa: E402
 import torch  # noqa: E402
 
-import isaaclab.utils.math as math_utils  # noqa: E402
 from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
 from isaaclab.managers import TerminationTermCfg as DoneTerm  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 import tasks  # noqa: E402
+from common import frames  # noqa: E402
+from tasks.camera_shutter import (  # noqa: E402
+    GRIPPER_CLOSE,
+    GRIPPER_OPEN,
+    LEFT_HAND_POSE,
+    RIGHT_HAND_POSE,
+    compose_action,
+    hold_current_pose_action,
+)
 
 CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam", "lens_cam")
-OPEN, CLOSE = 1.0, -1.0
 FINGERTIP_BELOW_HAND = 0.1034  # panda_hand origin to fingertip, with the hand pointing down
 BUTTON_TOP_ABOVE_ORIGIN = 0.0048  # the button link origin is the bottom of the button head
 APPROACH_HEIGHT = 0.05
@@ -82,19 +89,15 @@ def hold_until_app_closes(env: ManagerBasedRLEnv, hold: torch.Tensor) -> None:
         env.step(hold)
 
 
-def hold_current_pose_action(env: ManagerBasedRLEnv) -> torch.Tensor:
-    return compose_action(hand_pose_in_base(env, "robot_left"), OPEN, hand_pose_in_base(env, "robot_right"), OPEN)
-
-
 def shutter_press_actions(env: ManagerBasedRLEnv, hold: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """Right-hand targets above the button and past its top, fingers closed, orientation unchanged."""
-    left_pose, right_pose = hold[:, 0:7], hold[:, 8:15]
+    left_pose, right_pose = hold[:, LEFT_HAND_POSE], hold[:, RIGHT_HAND_POSE]
     button_top_w = shutter_button_top(env)
     actions = []
     for fingertip_offset in (APPROACH_HEIGHT, -PRESS_DEPTH):
         hand_target_w = button_top_w + torch.tensor([0.0, 0.0, FINGERTIP_BELOW_HAND + fingertip_offset], device=env.device)
-        target_pose = torch.cat([point_in_base(env, "robot_right", hand_target_w), right_pose[:, 3:7]], dim=-1)
-        actions.append(compose_action(left_pose, OPEN, target_pose, CLOSE))
+        target_pose = torch.cat([frames.point_in_base(env.scene["robot_right"], hand_target_w), right_pose[:, 3:7]], dim=-1)
+        actions.append(compose_action(left_pose, GRIPPER_OPEN, target_pose, GRIPPER_CLOSE))
     return actions[0], actions[1]
 
 
@@ -113,31 +116,6 @@ def step_for(env: ManagerBasedRLEnv, action: torch.Tensor, steps: int) -> dict:
     for _ in range(steps):
         obs, *_ = env.step(action)
     return obs
-
-
-def compose_action(left_pose, left_gripper: float, right_pose, right_gripper: float) -> torch.Tensor:
-    """Concatenate the 16D action in the env's term order."""
-    gripper = lambda value: torch.full((left_pose.shape[0], 1), value, device=left_pose.device)  # noqa: E731
-    return torch.cat([left_pose, gripper(left_gripper), right_pose, gripper(right_gripper)], dim=-1)
-
-
-def hand_pose_in_base(env: ManagerBasedRLEnv, robot_name: str) -> torch.Tensor:
-    """panda_hand pose (xyz + xyzw quaternion) in the robot's base frame, the frame the IK action uses."""
-    robot = env.scene[robot_name]
-    hand = robot.find_bodies("panda_hand")[0][0]
-    pos, quat = math_utils.subtract_frame_transforms(
-        robot.data.root_pos_w.torch,
-        robot.data.root_quat_w.torch,
-        robot.data.body_pos_w.torch[:, hand],
-        robot.data.body_quat_w.torch[:, hand],
-    )
-    return torch.cat([pos, quat], dim=-1)
-
-
-def point_in_base(env: ManagerBasedRLEnv, robot_name: str, point_w: torch.Tensor) -> torch.Tensor:
-    robot = env.scene[robot_name]
-    pos, _ = math_utils.subtract_frame_transforms(robot.data.root_pos_w.torch, robot.data.root_quat_w.torch, point_w)
-    return pos
 
 
 def shutter_button_top(env: ManagerBasedRLEnv) -> torch.Tensor:
