@@ -1,9 +1,13 @@
-"""Bimanual camera-shutter environment: two fixed-base Franka arms and a camera with a pressable shutter.
+"""Camera-shutter task: the left Franka picks up a camera and aims it at a green post; the right presses the shutter.
 
-World frame: +x points from the arms toward the subject, +y to the left, z = 0 is the table top.
-The left arm (+y) holds the camera and the right arm (-y) presses the shutter button. Both arms
-face the table centre. Stock Isaac Lab MDP terms are used, except the lens aim error from
-common/camera.py. Robot, wrist-camera, and 16D action definitions live in common/franka.py.
+The file reads top to bottom as the parts of the task:
+- Settings: the values to adjust while experimenting or collecting data.
+- CameraShutterSceneCfg: what exists in the world.
+- ObservationsCfg: what is read from the world each step, which a policy sees and a demo records.
+- EventsCfg and TerminationsCfg: how an episode resets and when it ends.
+- CameraShutterEnvCfg: the whole task, with the 16D bimanual action from common/franka.py.
+
+Positions are in the env frame: +x points from the arms toward the subject, +y to the left, z = 0 is the table top.
 """
 
 import math
@@ -32,43 +36,45 @@ from common import camera, frames, franka
 
 SIM_DIR = Path(__file__).resolve().parents[1]
 CAMERA_PROP_USD = SIM_DIR / "assets" / "camera_prop" / "camera.usda"
-SCENE_USD = SIM_DIR / "scenes" / "camera_shutter.usda"  # floor, table, rack, and the subject at Scene/Subject
+SCENE_USD = SIM_DIR / "scenes" / "camera_shutter.usda"
 
 
-# Settings to adjust while experimenting or collecting data. Positions are in the env frame
-# (+x toward the subject, +y left, z = 0 the table top). The subject is placed in SCENE_USD.
+# Settings: adjust these while experimenting or collecting data. The subject itself is placed in SCENE_USD.
 
 
 @dataclass(frozen=True)
 class TimingSettings:
-    """Simulation rates and the episode time budget."""
+    """How fast physics and control run, and how long a policy has to finish.
 
-    physics_dt_s: float = 0.01  # 100 Hz physics
-    physics_steps_per_action: int = 5  # 20 Hz control, the rate of OpenPi's Franka pre-training data
-    episode_length_s: float = 30.0  # time budget for policy evaluation; demo recording and Mimic ignore it
+    Control runs at 20 Hz to match OpenPi's Franka pre-training data. Demo recording and Mimic ignore episode length.
+    """
+
+    physics_dt_s: float = 0.01
+    physics_steps_per_action: int = 5
+    episode_length_s: float = 30.0
 
 
 @dataclass(frozen=True)
 class OutcomeSettings:
-    """When an episode succeeds or fails."""
+    """When an episode succeeds (the shutter is pressed this deep) or fails (the camera drops this far)."""
 
-    shutter_press_depth_m: float = 0.003  # success: the shutter goes deeper than this (full travel is 4 mm)
-    camera_drop_m: float = 0.1  # failure: the camera prop falls this far below the table top
+    shutter_press_depth_m: float = 0.003
+    camera_drop_m: float = 0.1
 
 
 @dataclass(frozen=True)
 class LayoutSettings:
-    """Where the arms stand and where the camera prop starts."""
+    """Where the two arms stand (left at +y, right at -y) and where the camera prop starts on the table."""
 
-    arm_base_y_m: float = 0.5  # left arm at +y, right arm at -y, both on the table's back edge
-    camera_prop_start: tuple[float, float, float] = (0.35, 0.15, 0.001)  # bottom centre of the prop
+    arm_base_y_m: float = 0.5
+    camera_prop_start: tuple[float, float, float] = (0.35, 0.15, 0.001)
 
 
 @dataclass(frozen=True)
 class ImageSettings:
-    """What the four RGB cameras record: resolution, lighting, and the fixed table view."""
+    """What the four RGB cameras record. 224 px is OpenPi's input size, so frames need no resizing."""
 
-    image_size: int = 224  # OpenPi's input resolution, so frames need no resizing
+    image_size: int = 224
     light_intensity: float = 2000.0
     table_cam_eye: tuple[float, float, float] = (-0.3, 0.0, 1.5)
     table_cam_target: tuple[float, float, float] = (0.4, 0.0, 0.05)
@@ -92,7 +98,12 @@ def _look_at(eye: tuple[float, float, float], target: tuple[float, float, float]
 
 @configclass
 class CameraShutterSceneCfg(InteractiveSceneCfg):
-    """Light, the SCENE_USD fixtures, two Franka arms, the camera prop, and four RGB cameras."""
+    """What exists in the world.
+
+    The light, the static fixtures from SCENE_USD (floor, table, rack, green post), two Franka arms, the camera
+    prop with its spring-loaded shutter, and four RGB cameras. Each attribute name is how code refers to that
+    object, as in env.scene["lens_cam"].
+    """
 
     light = AssetBaseCfg(
         prim_path="/World/Light",
@@ -107,7 +118,6 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/CameraProp",
         spawn=sim_utils.UsdFileCfg(usd_path=str(CAMERA_PROP_USD)),
         init_state=ArticulationCfg.InitialStateCfg(pos=LAYOUT.camera_prop_start, joint_pos={"shutter_joint": 0.0}),
-        # Return spring of the shutter button: about 2 N at the full 4 mm press.
         actuators={
             "shutter_spring": ImplicitActuatorCfg(joint_names_expr=["shutter_joint"], stiffness=500.0, damping=5.0)
         },
@@ -125,23 +135,26 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     )
     left_wrist_cam = franka.wrist_cam_cfg("RobotLeft", image_size=IMAGES.image_size)
     right_wrist_cam = franka.wrist_cam_cfg("RobotRight", image_size=IMAGES.image_size)
-    # The photo the camera prop would take: a 50 mm lens on 36 mm film, looking along the lens (+x).
     lens_cam = CameraCfg(
         prim_path="{ENV_REGEX_NS}/CameraProp/body/lens_cam",
         height=IMAGES.image_size,
         width=IMAGES.image_size,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(focal_length=50.0, horizontal_aperture=36.0, clipping_range=(0.01, 5.0)),
-        # 1 mm ahead of the lens glass, in the camera prop's body frame.
         offset=CameraCfg.OffsetCfg(pos=(0.071, 0.0099, 0.0338), rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
     )
 
 
 @configclass
 class ObservationsCfg:
+    """What is read from the world each step.
+
+    The policy group is what a policy sees and what a recorded demo stores. Each term applies a function to a
+    scene object named with SceneEntityCfg. Images and vectors stay as separate terms.
+    """
+
     @configclass
     class PolicyCfg(ObsGroup):
-        """Robot state, camera prop state, and RGB frames, kept as separate terms."""
 
         left_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot_left")})
         right_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot_right")})
@@ -173,17 +186,20 @@ class ObservationsCfg:
 
 @configclass
 class EventsCfg:
+    """What a reset does: every object returns to its initial state."""
+
     reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
 
 
 @configclass
 class TerminationsCfg:
+    """When an episode ends: the time budget runs out, the camera drops, or the shutter is pressed (success)."""
+
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     camera_dropped = DoneTerm(
         func=mdp.root_height_below_minimum,
         params={"minimum_height": -OUTCOME.camera_drop_m, "asset_cfg": SceneEntityCfg("camera_prop")},
     )
-    # The photo is taken: the shutter joint leaves its bounds below -shutter_press_depth_m.
     success = DoneTerm(
         func=mdp.joint_pos_out_of_manual_limit,
         params={
@@ -195,8 +211,11 @@ class TerminationsCfg:
 
 @configclass
 class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
-    # env_spacing equals the 5 m floor tile in SCENE_USD, so the floors of cloned envs tile
-    # and the table camera does not see the neighbouring envs.
+    """The whole task: the parts above, the 16D bimanual action, and simulation timing and rendering.
+
+    env_spacing matches the 5 m floor tile in SCENE_USD, so cloned envs neither overlap nor appear in each other's view.
+    """
+
     scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=1, env_spacing=5.0)
     observations: ObservationsCfg = ObservationsCfg()
     actions: franka.BimanualActionsCfg = franka.BimanualActionsCfg()
@@ -214,7 +233,6 @@ class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics = PhysxCfg(
             bounce_threshold_velocity=0.01,
             friction_correlation_distance=0.00625,
-            # Let object contacts stall the position-driven grippers before they tunnel through a grasp.
             solve_articulation_contact_last=True,
         )
         self.viewer.eye = (-1.2, 0.0, 1.0)
