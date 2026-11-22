@@ -33,14 +33,27 @@ ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
 SCENE_USD = Path(__file__).resolve().parents[1] / "scenes" / "camera_shutter.usda"  # floor, table, rack, subject
 
+# Episode and simulation settings.
+EPISODE_LENGTH_S = 30.0
+CAMERA_DROP_HEIGHT_M = -0.1  # Relative to the table top.
+SHUTTER_PRESSED_POS = -0.003  # Shutter joint position that counts as a press; fully pressed is -0.004 m.
+# 100 Hz physics, 20 Hz control to match OpenPi's Franka pre-training data.
+PHYSICS_DT_S = 0.01
+PHYSICS_STEPS_PER_ACTION = 5
+NUM_ENVS = 1
+
+# Scene and camera settings.
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
 SUBJECT_POS = (1.1, 0.0, 0.106)  # centre of the green post on the rack; must match Subject in SCENE_USD
-SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; fully pressed is -0.004
+LIGHT_INTENSITY = 2000.0
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
+TABLE_CAM_FOCAL_LENGTH_MM = 18.0
 IMAGE_SIZE = 224  # OpenPi's input resolution, so frames need no resizing
+VIEWER_EYE = (-1.2, 0.0, 1.0)
+VIEWER_TARGET = (0.4, 0.0, 0.1)
 
 
 def _rgb_obs(camera_name: str) -> ObsTerm:
@@ -52,7 +65,7 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     """Light, the SCENE_USD fixtures, two Franka arms, the camera prop, and four RGB cameras."""
 
     light = AssetBaseCfg(
-        prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=2000.0)
+        prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=LIGHT_INTENSITY)
     )
     fixtures = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Scene", spawn=sim_utils.UsdFileCfg(usd_path=str(SCENE_USD)))
 
@@ -74,7 +87,9 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         height=IMAGE_SIZE,
         width=IMAGE_SIZE,
         data_types=["rgb"],
-        spawn=sim_utils.PinholeCameraCfg(focal_length=18.0, horizontal_aperture=20.955, clipping_range=(0.05, 5.0)),
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=TABLE_CAM_FOCAL_LENGTH_MM, horizontal_aperture=20.955, clipping_range=(0.05, 5.0)
+        ),
         offset=CameraCfg.OffsetCfg(
             pos=TABLE_CAM_EYE, rot=frames.look_at_quat(TABLE_CAM_EYE, TABLE_CAM_TARGET), convention="world"
         ),
@@ -139,7 +154,8 @@ class EventsCfg:
 class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     camera_dropped = DoneTerm(
-        func=mdp.root_height_below_minimum, params={"minimum_height": -0.1, "asset_cfg": SceneEntityCfg("camera_prop")}
+        func=mdp.root_height_below_minimum,
+        params={"minimum_height": CAMERA_DROP_HEIGHT_M, "asset_cfg": SceneEntityCfg("camera_prop")},
     )
     # The photo is taken: the shutter joint goes below SHUTTER_PRESSED_POS, i.e. leaves the bounds below.
     success = DoneTerm(
@@ -155,7 +171,7 @@ class TerminationsCfg:
 class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
     # env_spacing equals the 5 m floor tile in SCENE_USD, so the floors of cloned envs tile
     # and the table camera does not see the neighbouring envs.
-    scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=1, env_spacing=5.0)
+    scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=NUM_ENVS, env_spacing=5.0)
     observations: ObservationsCfg = ObservationsCfg()
     actions: franka.BimanualActionsCfg = franka.BimanualActionsCfg()
     events: EventsCfg = EventsCfg()
@@ -165,10 +181,9 @@ class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
     curriculum = None
 
     def __post_init__(self):
-        # 100 Hz physics, 20 Hz control: the rate of OpenPi's Franka pre-training data.
-        self.decimation = 5
-        self.episode_length_s = 30.0
-        self.sim.dt = 0.01
+        self.decimation = PHYSICS_STEPS_PER_ACTION
+        self.episode_length_s = EPISODE_LENGTH_S
+        self.sim.dt = PHYSICS_DT_S
         self.sim.render_interval = self.decimation
         self.sim.physics = PhysxCfg(
             bounce_threshold_velocity=0.01,
@@ -176,8 +191,8 @@ class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
             # Let object contacts stall the position-driven grippers before they tunnel through a grasp.
             solve_articulation_contact_last=True,
         )
-        self.viewer.eye = (-1.2, 0.0, 1.0)
-        self.viewer.lookat = (0.4, 0.0, 0.1)
+        self.viewer.eye = VIEWER_EYE
+        self.viewer.lookat = VIEWER_TARGET
         self.num_rerenders_on_reset = 3
         scene = self.scene
         for camera_cfg in (scene.table_cam, scene.left_wrist_cam, scene.right_wrist_cam, scene.lens_cam):
