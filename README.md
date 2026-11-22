@@ -18,8 +18,6 @@ The work proceeds in stages, and each stage gets its own folder when we reach it
 └── 📄 README.md
 ```
 
-`sim/bimanual_sim` is the only definition of the task and its action layout. Later stages import it with `PYTHONPATH=sim` instead of copying it.
-
 ## Simulation environment
 
 Task `Bimanual-CameraShutter-Franka`. Two fixed-base Franka Panda arms with parallel grippers face each other across a table. The left arm (+y) holds the camera, the right arm (-y) presses the shutter, and the green post is the subject to aim at.
