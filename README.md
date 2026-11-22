@@ -10,7 +10,7 @@ The work proceeds in stages, and each stage gets its own folder when we reach it
 📁 robot-learning/
 ├── 📁 sim/                  # 1. Simulation (conda isaacsim: Isaac Sim 6.2, Isaac Lab 3.0)
 │   ├── 📁 assets/           #    every USD the env loads
-│   ├── 📁 bimanual_sim/     #    task definition: scene, actions, observations
+│   ├── 📁 tasks/            #    task definitions: scene, actions, observations
 │   └── 📁 scripts/          #    📄 smoke_test.py
 ├── 📁 collect/   (next)     # 2. Demo collection, HDF5 → LeRobot (conda isaacsim)
 ├── 📁 train/     (later)    # 3. π0.5 fine-tuning (OpenPi's own environment)

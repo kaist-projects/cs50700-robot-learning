@@ -30,11 +30,11 @@ from pathlib import Path  # noqa: E402
 import imageio.v3 as iio  # noqa: E402
 import torch  # noqa: E402
 
-import bimanual_sim  # noqa: E402
 import isaaclab.utils.math as math_utils  # noqa: E402
 from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
 from isaaclab.managers import TerminationTermCfg as DoneTerm  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+import tasks  # noqa: E402
 
 CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam", "lens_cam")
 OPEN, CLOSE = 1.0, -1.0
@@ -72,7 +72,7 @@ def main():
 
 def make_env() -> tuple[ManagerBasedRLEnv, DoneTerm]:
     """Build the env with its success term taken out, as record_demos.py does, so a press does not reset it."""
-    env_cfg = parse_env_cfg(bimanual_sim.CAMERA_SHUTTER_TASK, num_envs=1, overrides=hydra_overrides)
+    env_cfg = parse_env_cfg(tasks.CAMERA_SHUTTER_TASK, num_envs=1, overrides=hydra_overrides)
     success_term, env_cfg.terminations.success = env_cfg.terminations.success, None
     return ManagerBasedRLEnv(cfg=env_cfg), success_term
 
