@@ -7,6 +7,7 @@ saved at the deepest press.
 Run from the repository root in the `isaacsim` conda env:
 
     PYTHONPATH=sim python sim/scripts/smoke_test.py
+    PYTHONPATH=sim python sim/scripts/smoke_test.py --viz kit --keep_open   # GUI window
 """
 
 import argparse
@@ -15,6 +16,9 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Smoke test for the bimanual camera-shutter env.")
 parser.add_argument("--out_dir", default="sim/outputs/smoke", help="Directory for the saved camera frames.")
+parser.add_argument(
+    "--keep_open", action="store_true", help="After the test, hold the hands still until the app window is closed."
+)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_overrides = parser.parse_known_args()
 simulation_app = AppLauncher(args_cli, enable_cameras=True).app
@@ -56,7 +60,14 @@ def main():
     print(f"[smoke] shutter joint: pressed {pressed * 1e3:.1f} mm, released {released * 1e3:.1f} mm")
 
     print_observation_shapes(obs["policy"])
+    if args_cli.keep_open:
+        hold_until_app_closes(env, hold_current_pose_action(env))
     env.close()
+
+
+def hold_until_app_closes(env: ManagerBasedRLEnv, hold: torch.Tensor) -> None:
+    while simulation_app.is_running():
+        env.step(hold)
 
 
 def hold_current_pose_action(env: ManagerBasedRLEnv) -> torch.Tensor:
