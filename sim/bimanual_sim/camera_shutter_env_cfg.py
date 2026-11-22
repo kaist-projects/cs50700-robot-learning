@@ -14,7 +14,9 @@ import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.envs.mdp.actions.actions_cfg import DifferentialInverseKinematicsActionCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -40,6 +42,17 @@ SUBJECT_POS = (0.9, 0.0, 0.15)
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
 IMAGE_SIZE = 224  # OpenPi's input resolution, so frames need no resizing
+# libfranka's "ready" pose, with the hand pointing straight down. Isaac Lab's default tilts it by 45 degrees.
+FRANKA_READY_JOINT_POS = {
+    "panda_joint1": 0.0,
+    "panda_joint2": -math.pi / 4,
+    "panda_joint3": 0.0,
+    "panda_joint4": -3 * math.pi / 4,
+    "panda_joint5": 0.0,
+    "panda_joint6": math.pi / 2,
+    "panda_joint7": math.pi / 4,
+    "panda_finger_joint.*": 0.04,
+}
 
 
 def _yaw_quat(yaw_deg: float) -> tuple[float, float, float, float]:
@@ -63,7 +76,9 @@ def _franka_cfg(prim_name: str, base_y: float, yaw_deg: float) -> ArticulationCf
     return FRANKA_PANDA_HIGH_PD_CFG.replace(
         prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
         spawn=FRANKA_PANDA_HIGH_PD_CFG.spawn.replace(usd_path=str(FRANKA_USD)),
-        init_state=FRANKA_PANDA_HIGH_PD_CFG.init_state.replace(pos=(0.0, base_y, 0.0), rot=_yaw_quat(yaw_deg)),
+        init_state=FRANKA_PANDA_HIGH_PD_CFG.init_state.replace(
+            pos=(0.0, base_y, 0.0), rot=_yaw_quat(yaw_deg), joint_pos=FRANKA_READY_JOINT_POS
+        ),
     )
 
 
@@ -148,28 +163,34 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     right_wrist_cam = _wrist_cam_cfg("RobotRight")
 
 
+def _hand_pose_action(robot_name: str) -> DifferentialInverseKinematicsActionCfg:
+    """Absolute panda_hand pose target (xyz + xyzw quaternion) in the arm's base frame, solved by IK."""
+    return DifferentialInverseKinematicsActionCfg(
+        asset_name=robot_name,
+        joint_names=["panda_joint.*"],
+        body_name="panda_hand",
+        controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
+    )
+
+
+def _gripper_action(robot_name: str) -> mdp.BinaryJointPositionActionCfg:
+    """One gripper command: negative closes, zero or positive opens."""
+    return mdp.BinaryJointPositionActionCfg(
+        asset_name=robot_name,
+        joint_names=["panda_finger.*"],
+        open_command_expr={"panda_finger_.*": 0.04},
+        close_command_expr={"panda_finger_.*": 0.0},
+    )
+
+
 @configclass
 class ActionsCfg:
-    """Per-arm joint position targets plus a binary gripper per arm, in this order."""
+    """16D action, in this order: left hand pose 7, left gripper 1, right hand pose 7, right gripper 1."""
 
-    left_arm = mdp.JointPositionActionCfg(
-        asset_name="robot_left", joint_names=["panda_joint.*"], scale=1.0, use_default_offset=True
-    )
-    left_gripper = mdp.BinaryJointPositionActionCfg(
-        asset_name="robot_left",
-        joint_names=["panda_finger.*"],
-        open_command_expr={"panda_finger_.*": 0.04},
-        close_command_expr={"panda_finger_.*": 0.0},
-    )
-    right_arm = mdp.JointPositionActionCfg(
-        asset_name="robot_right", joint_names=["panda_joint.*"], scale=1.0, use_default_offset=True
-    )
-    right_gripper = mdp.BinaryJointPositionActionCfg(
-        asset_name="robot_right",
-        joint_names=["panda_finger.*"],
-        open_command_expr={"panda_finger_.*": 0.04},
-        close_command_expr={"panda_finger_.*": 0.0},
-    )
+    left_arm = _hand_pose_action("robot_left")
+    left_gripper = _gripper_action("robot_left")
+    right_arm = _hand_pose_action("robot_right")
+    right_gripper = _gripper_action("robot_right")
 
 
 @configclass
