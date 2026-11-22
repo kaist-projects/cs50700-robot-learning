@@ -70,8 +70,8 @@ conda activate isaacsim
 # Open the static scene in Isaac Sim
 isaacsim --exec "open_stage.py '$PWD/sim/scenes/camera_shutter.usda'"
 
-# Run the smoke test
-python sim/scripts/smoke_test.py
+# Run the task for a few steps
+python sim/scripts/simple_run.py
 ```
 
 ## Assets
