@@ -4,8 +4,6 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 
 ## Layout
 
-The work proceeds in stages, and each stage gets its own folder when we reach it.
-
 ```
 📁 robot-learning/
 ├── 📁 sim/        # Isaac Sim 6.2, Isaac Lab 3.0
