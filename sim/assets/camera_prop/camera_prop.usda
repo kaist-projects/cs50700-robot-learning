@@ -1,0 +1,85 @@
+#usda 1.0
+(
+    defaultPrim = "CameraProp"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = """Handheld camera prop with a pressable shutter button.
+
+    Floating-base articulation with two links:
+    - body: 5 x 12 x 8 cm box (x = lens axis, y = width, z = height) plus a lens cylinder along +x.
+    - shutter_button: small cylinder on the top face at the -y end, on a prismatic joint along +z.
+    The joint travels from 0 (released) to -4 mm (fully pressed). The return spring is the
+    joint drive; the Isaac Lab actuator config overrides its gains."""
+)
+
+def Xform "CameraProp" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI"]
+)
+{
+    def Xform "body" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        float physics:mass = 0.4
+
+        def Cube "housing" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            double size = 1
+            float3 xformOp:scale = (0.05, 0.12, 0.08)
+            uniform token[] xformOpOrder = ["xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.06, 0.06, 0.07)]
+        }
+
+        def Cylinder "lens" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token axis = "X"
+            double height = 0.04
+            double radius = 0.025
+            double3 xformOp:translate = (0.045, 0.02, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+            color3f[] primvars:displayColor = [(0.35, 0.35, 0.38)]
+        }
+    }
+
+    def Xform "shutter_button" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        float physics:mass = 0.01
+        double3 xformOp:translate = (0, -0.04, 0.046)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cylinder "cap" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token axis = "Z"
+            double height = 0.012
+            double radius = 0.009
+            color3f[] primvars:displayColor = [(0.85, 0.1, 0.1)]
+        }
+    }
+
+    def PhysicsPrismaticJoint "shutter_joint" (
+        prepend apiSchemas = ["PhysicsDriveAPI:linear"]
+    )
+    {
+        rel physics:body0 = </CameraProp/body>
+        rel physics:body1 = </CameraProp/shutter_button>
+        uniform token physics:axis = "Z"
+        point3f physics:localPos0 = (0, -0.04, 0.046)
+        quatf physics:localRot0 = (1, 0, 0, 0)
+        point3f physics:localPos1 = (0, 0, 0)
+        quatf physics:localRot1 = (1, 0, 0, 0)
+        float physics:lowerLimit = -0.004
+        float physics:upperLimit = 0
+        uniform token drive:linear:physics:type = "force"
+        float drive:linear:physics:stiffness = 500
+        float drive:linear:physics:damping = 5
+        float drive:linear:physics:targetPosition = 0
+    }
+}
