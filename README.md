@@ -29,7 +29,7 @@ In `Bimanual-CameraShutter-Franka`, the left arm holds and aims the camera at a 
 | Grippers | Franka Panda two-finger parallel grippers |
 | Camera | Poly Haven's Camera 01 rangefinder model with a spring-loaded shutter button |
 
-![Two Franka Panda arms with parallel grippers facing each other across the Isaac Lab worktable](docs/images/readme/franka-panda-workcell.png)
+![Two Franka Panda arms with parallel grippers facing each other across the work table, with the camera and the green post on it](docs/images/readme/franka-panda-workcell.png)
 
 The right gripper closes as it approaches the shutter from above, then lowers onto the button.
 
