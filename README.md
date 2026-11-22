@@ -7,12 +7,11 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 ```
 📁 robot-learning/
 ├── 📁 sim/
-│   ├── 📁 assets/
-│   ├── 📁 scenes/
-│   ├── 📁 tasks/
-│   ├── 📁 common/
-│   └── 📁 scripts/
-│       └── 📄 smoke_test.py
+│   ├── 📁 assets/   # USD models and textures
+│   ├── 📁 scenes/   # Static workcell layouts
+│   ├── 📁 tasks/    # Isaac Lab task configs
+│   ├── 📁 common/   # Shared simulation code
+│   └── 📁 scripts/  # Simulation launch and tests
 ├── 📁 collect/    # Demo collection (next)
 ├── 📁 train/      # π0.5 fine-tuning (later)
 ├── 📁 docs/
