@@ -8,7 +8,7 @@ KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Biman
 
 ## Reference docs
 
-- `docs/proposal/team8-proposal.md` (and `.pptx` for speaker notes): read before working on method design, task spec, data/training/eval pipeline, baselines, metrics, ablations, or schedule.
+- `docs/proposal/team8-proposal.md`: read before working on method design, task spec, data/training/eval pipeline, baselines, metrics, ablations, or schedule.
 - `docs/course/cs577-syllabus-fall2026.md`: read when checking course requirements, deliverables, or deadlines.
 
 ## Rules
@@ -26,5 +26,7 @@ KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Biman
 
 - `docs/proposal/`: project proposal and design source of truth.
 - `docs/course/`: course-provided materials (private).
+- `docs/papers/`: reference papers (PDF plus Markdown conversion).
+- `docs/images/`: figures referenced by Markdown docs, one folder per source document.
 - `docs/ai/`: AI-generated plans, analyses, and working notes.
 - `docs/artifacts/`: human-readable deliverables and visualizations (e.g., HTML).
