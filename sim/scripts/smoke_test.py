@@ -1,7 +1,7 @@
 """Smoke test for the camera-shutter env.
 
 Holds both hands still, presses the shutter button with the right hand and lifts it again, then
-prints IK tracking error, the shutter joint travel, and observation shapes. One frame per camera is
+prints IK tracking error, the lens aim error, the shutter joint travel, and observation shapes. One frame per camera is
 saved at the deepest press.
 
 Run from the repository root in the `isaacsim` conda env:
@@ -11,6 +11,7 @@ Run from the repository root in the `isaacsim` conda env:
 """
 
 import argparse
+import math
 
 from isaaclab.app import AppLauncher
 
@@ -47,8 +48,9 @@ def main():
     env.reset()
 
     hold = hold_current_pose_action(env)
-    step_for(env, hold, PHASE_STEPS)
+    obs = step_for(env, hold, PHASE_STEPS)
     report_tracking_error(env, hold)
+    report_aim_error(obs["policy"])
 
     above_button, into_button = shutter_press_actions(env, hold)
     step_for(env, above_button, PHASE_STEPS)
@@ -90,6 +92,10 @@ def report_tracking_error(env: ManagerBasedRLEnv, commanded: torch.Tensor) -> No
     for name, pose_slice in (("robot_left", slice(0, 3)), ("robot_right", slice(8, 11))):
         error = torch.linalg.norm(hand_pose_in_base(env, name)[:, :3] - commanded[:, pose_slice], dim=-1)
         print(f"[smoke] {name} hold position error: {error[0].item() * 1e3:.2f} mm")
+
+
+def report_aim_error(policy_obs: dict[str, torch.Tensor]) -> None:
+    print(f"[smoke] lens aim error: {math.degrees(policy_obs['lens_aim_error'][0, 0].item()):.1f} deg")
 
 
 def step_for(env: ManagerBasedRLEnv, action: torch.Tensor, steps: int) -> dict:

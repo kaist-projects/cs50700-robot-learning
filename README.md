@@ -29,7 +29,7 @@ Task `Bimanual-CameraShutter-Franka`. Two fixed-base Franka Panda arms with para
 | Action (16D, in this order) | left hand pose 7, left gripper 1, right hand pose 7, right gripper 1 |
 | Hand pose | `panda_hand` position (m) + quaternion (x, y, z, w) in that arm's base frame, solved by IK |
 | Gripper | negative closes, zero or positive opens |
-| Observations | joint positions, hand and camera poses (world frame), shutter joint position, four 224×224 RGB cameras (table, left wrist, right wrist, and the camera prop's own lens) |
+| Observations | joint positions, hand and camera poses (world frame), shutter joint position, lens aim error (angle between the lens axis and the subject), four 224×224 RGB cameras (table, left wrist, right wrist, and the camera prop's own lens) |
 | Shutter button | prismatic joint with a return spring: 0 released, -4 mm fully pressed |
 | Control rate | 20 Hz (physics 100 Hz) |
 

@@ -2,7 +2,8 @@
 
 World frame: +x points from the arms toward the subject, +y to the left, z = 0 is the table top.
 The left arm (+y) holds the camera and the right arm (-y) presses the shutter button. Both arms
-face the table centre. Only stock Isaac Lab MDP terms are used.
+face the table centre. Stock Isaac Lab MDP terms are used, except the lens aim error in
+camera_terms.py.
 """
 
 import math
@@ -29,6 +30,8 @@ from isaaclab.utils import configclass
 from isaaclab_tasks.utils.presets import set_isaac_rtx_global_settings
 
 from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
+
+from . import camera_terms
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 FRANKA_USD = ASSET_DIR / "franka_panda" / "panda_instanceable.usd"
@@ -221,6 +224,14 @@ class ObservationsCfg:
             func=mdp.body_pose_w, params={"asset_cfg": SceneEntityCfg("camera_prop", body_names=["body"])}
         )
         shutter_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("camera_prop")})
+        lens_aim_error = ObsTerm(
+            func=camera_terms.lens_aim_error,
+            params={
+                "target_pos": SUBJECT_POS,
+                "lens_pos_b": LENS_FRONT,
+                "asset_cfg": SceneEntityCfg("camera_prop", body_names=["body"]),
+            },
+        )
         table_cam = _rgb_obs("table_cam")
         left_wrist_cam = _rgb_obs("left_wrist_cam")
         right_wrist_cam = _rgb_obs("right_wrist_cam")
