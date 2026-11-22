@@ -6,12 +6,17 @@ KAIST CS577 (Fall 2026), Team 8. Two Franka arms take a photo: the left arm hold
 
 The work proceeds in stages, and each stage gets its own folder when we reach it.
 
-| Folder | Stage | Python environment |
-| --- | --- | --- |
-| `sim/` | Simulation assets and the Isaac Lab environment | conda `isaacsim` (Isaac Sim 6.2, Isaac Lab 3.0) |
-| `collect/` (next) | Demonstration collection and conversion to LeRobot | conda `isaacsim` |
-| `train/` (later) | π0.5 fine-tuning with OpenPi | OpenPi's own environment |
-| `docs/` | Proposal, papers, notes | |
+```
+📁 robot-learning/
+├── 📁 sim/                  # 1. Simulation (conda isaacsim: Isaac Sim 6.2, Isaac Lab 3.0)
+│   ├── 📁 assets/           #    every USD the env loads
+│   ├── 📁 bimanual_sim/     #    task definition: scene, actions, observations
+│   └── 📁 scripts/          #    📄 smoke_test.py
+├── 📁 collect/   (next)     # 2. Demo collection, HDF5 → LeRobot (conda isaacsim)
+├── 📁 train/     (later)    # 3. π0.5 fine-tuning (OpenPi's own environment)
+├── 📁 docs/                 # proposal, papers, notes
+└── 📄 README.md
+```
 
 `sim/bimanual_sim` is the only definition of the task and its action layout. Later stages import it with `PYTHONPATH=sim` instead of copying it.
 
@@ -32,10 +37,11 @@ Run the smoke test from the repository root:
 
 ```bash
 conda activate isaacsim
-PYTHONPATH=sim python sim/scripts/smoke_test.py
+PYTHONPATH=sim python sim/scripts/smoke_test.py                        # headless
+PYTHONPATH=sim python sim/scripts/smoke_test.py --viz kit --keep_open  # GUI window
 ```
 
-It holds both hands, presses the shutter with the right hand, prints the shutter travel, and saves camera frames to `sim/outputs/smoke/`.
+It holds both hands, presses the shutter with the right hand, prints the shutter travel, and saves camera frames to `sim/outputs/smoke/`. With `--keep_open` the app keeps running until you close the window. The GUI needs a desktop session, such as RDP into the workstation.
 
 ## Assets
 
