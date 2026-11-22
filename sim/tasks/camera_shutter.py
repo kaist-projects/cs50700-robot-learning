@@ -72,19 +72,30 @@ class LayoutSettings:
 
 @dataclass(frozen=True)
 class ImageSettings:
-    """What the four RGB cameras record. 224 px is OpenPi's input size, so frames need no resizing."""
+    """What all four RGB cameras share: resolution and scene lighting. 224 px is OpenPi's input size."""
 
     image_size: int = 224
     light_intensity: float = 2000.0
-    table_cam_eye: tuple[float, float, float] = (-0.3, 0.0, 1.5)
-    table_cam_target: tuple[float, float, float] = (0.4, 0.0, 0.05)
-    table_cam_focal_length_mm: float = 18.0
+
+
+@dataclass(frozen=True)
+class TableCamSettings:
+    """The fixed camera that overlooks the whole workcell.
+
+    It is the only camera fixed in the world. The wrist cameras follow the hands, and the lens camera follows
+    the camera prop, so their poses come from the robots and the prop rather than from settings.
+    """
+
+    eye: tuple[float, float, float] = (-0.3, 0.0, 1.5)
+    target: tuple[float, float, float] = (0.4, 0.0, 0.05)
+    focal_length_mm: float = 18.0
 
 
 TIMING = TimingSettings()
 OUTCOME = OutcomeSettings()
 LAYOUT = LayoutSettings()
 IMAGES = ImageSettings()
+TABLE_CAM = TableCamSettings()
 
 
 def _rgb_obs(camera_name: str) -> ObsTerm:
@@ -129,9 +140,9 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         width=IMAGES.image_size,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=IMAGES.table_cam_focal_length_mm, horizontal_aperture=20.955, clipping_range=(0.05, 5.0)
+            focal_length=TABLE_CAM.focal_length_mm, horizontal_aperture=20.955, clipping_range=(0.05, 5.0)
         ),
-        offset=_look_at(eye=IMAGES.table_cam_eye, target=IMAGES.table_cam_target),
+        offset=_look_at(eye=TABLE_CAM.eye, target=TABLE_CAM.target),
     )
     left_wrist_cam = franka.wrist_cam_cfg("RobotLeft", image_size=IMAGES.image_size)
     right_wrist_cam = franka.wrist_cam_cfg("RobotRight", image_size=IMAGES.image_size)
