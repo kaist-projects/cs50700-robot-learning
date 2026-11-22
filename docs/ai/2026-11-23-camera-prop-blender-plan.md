@@ -4,7 +4,7 @@ Status: done, 2026-11-23. Replaces the box-shaped camera prop's look while keepi
 
 Outcome:
 - The button island was the release head plus a fixed collar. Faces above z = 73.35 mm became the moving head (15.2 mm diameter, 4.8 mm tall); the collar stayed on the body. At the full 4 mm press the head is still 0.8 mm above the collar.
-- Each object keeps only the material slots its faces use. Otherwise Blender's USD export bound the button to the first slot (`lens_body`) instead of `body`.
+- Each object keeps only the material slots its faces use. Otherwise Blender's USD export bound the button to the first slot (`lens_body`) instead of `body`. Rebuilding the slot list must restore each face's `material_index` afterwards, because `materials.clear()` resets them all to 0; the first export missed this and painted the whole body with `lens_body`.
 - The housing collider stops at the collar base (z = 71.5 mm) so the fingertip does not hit it before the button bottoms out. Colliders use `purpose = "guide"`, the same as the Franka asset's collision meshes.
 - Smoke test: the shutter reaches -4.4 mm when pressed and returns to -0.2 mm (the button's own weight on the spring).
 
