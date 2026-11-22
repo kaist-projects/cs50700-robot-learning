@@ -3,13 +3,17 @@
     defaultPrim = "CameraProp"
     metersPerUnit = 1
     upAxis = "Z"
-    doc = """Handheld camera prop with a pressable shutter button.
+    doc = """Handheld rangefinder camera with a pressable shutter button.
 
-    Floating-base articulation with two links:
-    - body: 5 x 12 x 8 cm box (x = lens axis, y = width, z = height) plus a lens cylinder along +x.
-    - shutter_button: small cylinder on the top face at the -y end, on a prismatic joint along +z.
-    The joint travels from 0 (released) to -4 mm (fully pressed). The return spring is the
-    joint drive; the Isaac Lab actuator config overrides its gains."""
+    Visuals: Poly Haven "Camera 01" (CC0, Rajil Jose Macatangay), split in Blender into
+    visuals/camera_body.usdc and visuals/shutter_button.usdc (source: source/camera_01_split.blend).
+    Frame: origin at the bottom centre, lens along +x, width along y, z up.
+
+    Physics: floating-base articulation with two links. Colliders are simple primitives,
+    slightly inside the visual mesh, and hidden from rendering with purpose "guide".
+    - body: main box up to the top-plate height around the button, plus the lens cylinder.
+    - shutter_button: the release-button head on a prismatic joint along +z, from
+      0 (released) to -4 mm (fully pressed). The Isaac Lab actuator config sets the spring."""
 )
 
 def Xform "CameraProp" (
@@ -22,26 +26,33 @@ def Xform "CameraProp" (
     {
         float physics:mass = 0.4
 
-        def Cube "housing" (
-            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        def Xform "visual" (
+            prepend references = @./visuals/camera_body.usdc@
         )
         {
-            double size = 1
-            float3 xformOp:scale = (0.05, 0.12, 0.08)
-            uniform token[] xformOpOrder = ["xformOp:scale"]
-            color3f[] primvars:displayColor = [(0.06, 0.06, 0.07)]
         }
 
-        def Cylinder "lens" (
+        def Cube "housing_collider" (
             prepend apiSchemas = ["PhysicsCollisionAPI"]
         )
         {
+            uniform token purpose = "guide"
+            double size = 1
+            double3 xformOp:translate = (0.0005, 0.0001, 0.036)
+            float3 xformOp:scale = (0.035, 0.136, 0.071)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Cylinder "lens_collider" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            uniform token purpose = "guide"
             uniform token axis = "X"
-            double height = 0.04
+            double height = 0.052
             double radius = 0.025
-            double3 xformOp:translate = (0.045, 0.02, 0)
+            double3 xformOp:translate = (0.0442, 0.0099, 0.0338)
             uniform token[] xformOpOrder = ["xformOp:translate"]
-            color3f[] primvars:displayColor = [(0.35, 0.35, 0.38)]
         }
     }
 
@@ -50,17 +61,25 @@ def Xform "CameraProp" (
     )
     {
         float physics:mass = 0.01
-        double3 xformOp:translate = (0, -0.04, 0.046)
+        double3 xformOp:translate = (0.0058, -0.0437, 0.07326)
         uniform token[] xformOpOrder = ["xformOp:translate"]
 
-        def Cylinder "cap" (
+        def Xform "visual" (
+            prepend references = @./visuals/shutter_button.usdc@
+        )
+        {
+        }
+
+        def Cylinder "head_collider" (
             prepend apiSchemas = ["PhysicsCollisionAPI"]
         )
         {
+            uniform token purpose = "guide"
             uniform token axis = "Z"
-            double height = 0.012
-            double radius = 0.009
-            color3f[] primvars:displayColor = [(0.85, 0.1, 0.1)]
+            double height = 0.0048
+            double radius = 0.0075
+            double3 xformOp:translate = (0, 0, 0.0024)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
     }
 
@@ -71,7 +90,7 @@ def Xform "CameraProp" (
         rel physics:body0 = </CameraProp/body>
         rel physics:body1 = </CameraProp/shutter_button>
         uniform token physics:axis = "Z"
-        point3f physics:localPos0 = (0, -0.04, 0.046)
+        point3f physics:localPos0 = (0.0058, -0.0437, 0.07326)
         quatf physics:localRot0 = (1, 0, 0, 0)
         point3f physics:localPos1 = (0, 0, 0)
         quatf physics:localRot1 = (1, 0, 0, 0)

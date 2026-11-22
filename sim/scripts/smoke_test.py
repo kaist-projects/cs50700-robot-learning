@@ -36,7 +36,7 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam")
 OPEN, CLOSE = 1.0, -1.0
 FINGERTIP_BELOW_HAND = 0.1034  # panda_hand origin to fingertip, with the hand pointing down
-BUTTON_CAP_HALF_HEIGHT = 0.006
+BUTTON_TOP_ABOVE_ORIGIN = 0.0048  # the button link origin is the bottom of the button head
 APPROACH_HEIGHT = 0.05
 PRESS_DEPTH = 0.01  # how far past the button top the fingertips are commanded
 PHASE_STEPS = 40  # 2 s at 20 Hz
@@ -126,7 +126,7 @@ def point_in_base(env: ManagerBasedRLEnv, robot_name: str, point_w: torch.Tensor
 def shutter_button_top(env: ManagerBasedRLEnv) -> torch.Tensor:
     camera_prop = env.scene["camera_prop"]
     button = camera_prop.find_bodies("shutter_button")[0][0]
-    return camera_prop.data.body_pos_w.torch[:, button] + torch.tensor([0.0, 0.0, BUTTON_CAP_HALF_HEIGHT], device=env.device)
+    return camera_prop.data.body_pos_w.torch[:, button] + torch.tensor([0.0, 0.0, BUTTON_TOP_ABOVE_ORIGIN], device=env.device)
 
 
 def shutter_position(env: ManagerBasedRLEnv) -> float:
