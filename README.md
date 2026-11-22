@@ -24,8 +24,7 @@ In `Bimanual-CameraShutter-Franka`, the left arm holds and aims the camera at a 
 
 | Component | Setup |
 | --- | --- |
-| Simulator | Isaac Sim 6.2.0 |
-| Framework | Isaac Lab 3.0.0 (Early Access) |
+| Simulator | Isaac Sim 6.2.0 with Isaac Lab v3.0.0 |
 | Robot arms | Two fixed-base Franka Panda arms |
 | Grippers | Franka Panda two-finger parallel grippers |
 | Camera | Poly Haven's Camera 01 rangefinder model with a spring-loaded shutter button |
