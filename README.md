@@ -52,6 +52,19 @@ In `Bimanual-CameraShutter-Franka`, the left arm holds and aims the camera at a 
 | --- | --- | --- |
 | ![Camera 01 rangefinder with its shutter button visible](docs/images/readme/camera-prop.png) | ![Closed gripper hovering above the shutter button in Isaac Lab](docs/images/readme/shutter-approach.png) | ![The same gripper lowered onto the shutter button in Isaac Lab](docs/images/readme/shutter-press.png) |
 
+### Task definition
+
+[`sim/tasks/camera_shutter.py`](sim/tasks/camera_shutter.py) defines the task. It is a config, not a script. [`sim/tasks/__init__.py`](sim/tasks/__init__.py) registers it as `Bimanual-CameraShutter-Franka`, and every script that runs the task (demo recording, replay, Mimic, policy evaluation) builds the same environment from that ID. Other stages import it rather than copy it, so a change here changes what every stage records and sees.
+
+| Config | Defines |
+| --- | --- |
+| `CameraShutterSceneCfg` | What is in the world: the light, the static scene [`sim/scenes/camera_shutter.usda`](sim/scenes/camera_shutter.usda) (floor, table, rack, green post), two Franka arms, the camera prop with its shutter spring, and four RGB cameras (table, both wrists, lens). |
+| `actions` | How a 16D action moves the arms: left hand pose (7), left gripper (1), right hand pose (7), right gripper (1). A hand pose is xyz plus an xyzw quaternion in that arm's base frame, solved by IK. A negative gripper value closes it. |
+| `ObservationsCfg` | What a policy sees and a demo records: joint positions, hand poses, camera pose, shutter position, lens aim error, and four 224×224 RGB images. |
+| `EventsCfg` | What a reset does: every object returns to its initial pose. |
+| `TerminationsCfg` | When an episode ends: a 30 s timeout, the camera dropping more than 10 cm below the table top, or success, which is the shutter pressed past 3 mm. |
+| `CameraShutterEnvCfg` | Timing and physics: 100 Hz physics and 20 Hz control, so each action runs 5 physics steps. |
+
 Run from the repository root.
 
 ```bash
