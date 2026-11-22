@@ -31,19 +31,13 @@ from common import camera, frames, franka
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
-TABLE_USD = ASSET_DIR / "packing_table" / "SM_HeavyDutyPackingTable_C02_01_physics.usd"
-RACK_USD = ASSET_DIR / "office_rack" / "Props" / "SM_Rack1m.usd"
+SCENE_USD = Path(__file__).resolve().parents[1] / "scenes" / "camera_shutter.usda"  # table, rack, and subject
 
-TABLE_HEIGHT = 0.994  # floor to table top
-# Table origin is its bottom centre. Its 0.76 m depth runs from just behind the arm bases to x = 0.6.
-TABLE_POS = (0.22, 0.0, -TABLE_HEIGHT)
-RACK_SHELF_HEIGHT = 0.95  # floor to the rack's top shelf
-# Rack origin is its bottom centre. Its 0.61 m depth starts about 0.2 m past the table's front edge.
-RACK_POS = (1.1, 0.0, -TABLE_HEIGHT)
+TABLE_HEIGHT = 0.994  # floor to table top, as laid out in SCENE_USD
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
-SUBJECT_POS = (1.1, 0.0, RACK_SHELF_HEIGHT - TABLE_HEIGHT + 0.15)  # centre of the 0.3 m post on the top shelf
+SUBJECT_POS = (1.1, 0.0, 0.106)  # centre of the green post on the rack; must match Subject in SCENE_USD
 SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; fully pressed is -0.004
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
@@ -56,7 +50,7 @@ def _rgb_obs(camera_name: str) -> ObsTerm:
 
 @configclass
 class CameraShutterSceneCfg(InteractiveSceneCfg):
-    """Table, two Franka arms, the camera prop, a subject on a rack to aim at, and four RGB cameras."""
+    """Floor, light, the SCENE_USD fixtures, two Franka arms, the camera prop, and four RGB cameras."""
 
     floor = AssetBaseCfg(
         prim_path="/World/Floor",
@@ -70,25 +64,7 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     light = AssetBaseCfg(
         prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=2000.0)
     )
-    # The table USD is authored in centimetres with its long side along x; turn that side along y.
-    table = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_POS, rot=frames.yaw_quat(90.0)),
-        spawn=sim_utils.UsdFileCfg(usd_path=str(TABLE_USD), scale=(0.01, 0.01, 0.01)),
-    )
-    rack = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Rack",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=RACK_POS),
-        spawn=sim_utils.UsdFileCfg(usd_path=str(RACK_USD)),
-    )
-    # Visual-only target the camera should aim at (no collision properties), standing on the rack.
-    subject = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Subject",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=SUBJECT_POS),
-        spawn=sim_utils.CylinderCfg(
-            radius=0.04, height=0.3, visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.1, 0.6, 0.2))
-        ),
-    )
+    fixtures = AssetBaseCfg(prim_path="{ENV_REGEX_NS}/Scene", spawn=sim_utils.UsdFileCfg(usd_path=str(SCENE_USD)))
 
     robot_left = franka.arm_cfg("RobotLeft", pos=(0.0, ARM_BASE_Y, 0.0), yaw_deg=-90.0)
     robot_right = franka.arm_cfg("RobotRight", pos=(0.0, -ARM_BASE_Y, 0.0), yaw_deg=90.0)

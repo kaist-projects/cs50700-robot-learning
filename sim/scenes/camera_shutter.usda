@@ -1,0 +1,67 @@
+#usda 1.0
+(
+    defaultPrim = "Scene"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = """Static fixtures of the camera-shutter task: the work table, the rack, and the subject.
+
+    Frame: the task's env frame. +x points from the arm bases toward the subject, +y to the left,
+    and z = 0 is the table top, so the floor is at z = -0.994.
+    - Table: Isaac's heavy-duty packing table (authored in cm, scaled by 0.01), turned 90 degrees so
+      its 2.47 m side runs along y. Its 0.76 m depth spans x = -0.16 to 0.60.
+    - Rack: Isaac's 1 m office rack, about 0.2 m past the table's front edge (x = 0.79 to 1.41).
+      Its top shelf is 0.95 m above the floor.
+    - Subject: a visual-only green post (no collider) standing on the rack's top shelf. The task's
+      SUBJECT_POS must match its centre, because the lens aim error is measured to that point.
+
+    Robots, the camera prop, sensors, the floor, and the light stay in the task's Python config."""
+)
+
+def Xform "Scene"
+{
+    def Xform "Table" (
+        prepend references = @../assets/packing_table/SM_HeavyDutyPackingTable_C02_01_physics.usd@
+    )
+    {
+        double3 xformOp:translate = (0.22, 0, -0.994)
+        quatd xformOp:orient = (0.7071067811865476, 0, 0, 0.7071067811865476)
+        float3 xformOp:scale = (0.01, 0.01, 0.01)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def Xform "Rack" (
+        prepend references = @../assets/office_rack/Props/SM_Rack1m.usd@
+    )
+    {
+        double3 xformOp:translate = (1.1, 0, -0.994)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "Subject" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token axis = "Z"
+        double height = 0.3
+        double radius = 0.04
+        float3[] extent = [(-0.04, -0.04, -0.15), (0.04, 0.04, 0.15)]
+        rel material:binding = </Scene/Looks/SubjectGreen>
+        double3 xformOp:translate = (1.1, 0, 0.106)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Scope "Looks"
+    {
+        def Material "SubjectGreen"
+        {
+            token outputs:surface.connect = </Scene/Looks/SubjectGreen/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.1, 0.6, 0.2)
+                token outputs:surface
+            }
+        }
+    }
+}

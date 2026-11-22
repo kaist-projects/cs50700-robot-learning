@@ -8,6 +8,7 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 📁 robot-learning/
 ├── 📁 sim/
 │   ├── 📁 assets/
+│   ├── 📁 scenes/
 │   ├── 📁 tasks/
 │   ├── 📁 common/
 │   └── 📁 scripts/
@@ -67,7 +68,7 @@ The smoke test presses the shutter, reports aim error, shutter travel, and task 
 
 ## Assets
 
-All assets live in `sim/assets/`, so the environment needs no asset server.
+All assets live in `sim/assets/`, so the environment needs no asset server. `sim/scenes/camera_shutter.usda` places the table, the rack, and the green post from these assets, and the task loads it as one fixture.
 
 - `franka_panda/`: Isaac Lab's Franka Panda (`Isaac/IsaacLab/Robots/FrankaEmika/Legacy/` from NVIDIA's Isaac 6.1 asset server).
 - `packing_table/`: the heavy-duty work table from Isaac's PackingTable prop (`Isaac/Props/PackingTable/props/SM_HeavyDutyPackingTable_C02_01/` from NVIDIA's Isaac 6.1 asset server), with only the textures its materials use. It is authored in centimetres, so the task scales it by 0.01.
