@@ -6,7 +6,7 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 
 ```
 📁 robot-learning/
-├── 📁 sim/        # Isaac Sim 6.2, Isaac Lab 3.0
+├── 📁 sim/
 │   ├── 📁 assets/
 │   ├── 📁 tasks/
 │   ├── 📁 common/
@@ -24,11 +24,11 @@ In `Bimanual-CameraShutter-Franka`, the left arm holds and aims the camera at a 
 
 | Component | Setup |
 | --- | --- |
+| Simulator | Isaac Sim 6.2.0 |
+| Framework | Isaac Lab 3.0.0 (Early Access) |
 | Robot arms | Two fixed-base Franka Panda arms |
 | Grippers | Franka Panda two-finger parallel grippers |
 | Camera | Poly Haven's Camera 01 rangefinder model with a spring-loaded shutter button |
-| Table | A fixed worktable with the arms mounted opposite each other |
-| RGB views | Table overview, one view from each wrist, and the camera's lens view |
 
 ![Two Franka Panda arms with parallel grippers facing each other across the Isaac Lab worktable](docs/images/readme/franka-panda-workcell.png)
 
