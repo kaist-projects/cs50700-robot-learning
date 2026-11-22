@@ -53,7 +53,7 @@ The right gripper closes as it approaches the shutter from above, then lowers on
 | --- | --- | --- |
 | ![Camera 01 rangefinder with its shutter button visible](docs/images/readme/camera-prop.png) | ![Closed gripper hovering above the shutter button in Isaac Lab](docs/images/readme/shutter-approach.png) | ![The same gripper lowered onto the shutter button in Isaac Lab](docs/images/readme/shutter-press.png) |
 
-See the action and observation layouts in the [task configuration](sim/tasks/camera_shutter.py).
+See the 16D action layout in [common/franka.py](sim/common/franka.py) and the scene and observation layouts in [camera_shutter.py](sim/tasks/camera_shutter.py).
 
 Run the smoke test from the repository root:
 

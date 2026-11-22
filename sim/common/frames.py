@@ -1,9 +1,28 @@
-"""Frame conversions for fixed-base arms. The IK pose actions take targets in the arm's base frame."""
+"""Frame conversions and xyzw orientation quaternions for fixed-base arms and cameras."""
+
+import math
+from collections.abc import Sequence
 
 import torch
 
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation
+
+
+def yaw_quat(yaw_deg: float) -> tuple[float, float, float, float]:
+    """Return the xyzw quaternion for a rotation about +z."""
+    half = math.radians(yaw_deg) / 2
+    return (0.0, 0.0, math.sin(half), math.cos(half))
+
+
+def look_at_quat(eye: Sequence[float], target: Sequence[float]) -> tuple[float, float, float, float]:
+    """Return the xyzw quaternion that points a world-convention camera (+x forward, +z up) at target."""
+    dx, dy, dz = (t - e for t, e in zip(target, eye))
+    half_yaw = math.atan2(dy, dx) / 2
+    half_pitch = math.atan2(-dz, math.hypot(dx, dy)) / 2
+    cy, sy = math.cos(half_yaw), math.sin(half_yaw)
+    cp, sp = math.cos(half_pitch), math.sin(half_pitch)
+    return (-sy * sp, cy * sp, sy * cp, cy * cp)
 
 
 def body_pose_in_base(robot: Articulation, body_name: str) -> torch.Tensor:

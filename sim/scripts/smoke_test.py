@@ -34,7 +34,7 @@ from isaaclab.managers import TerminationTermCfg as DoneTerm  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 import tasks  # noqa: E402
 from common import frames  # noqa: E402
-from tasks.camera_shutter import (  # noqa: E402
+from common.franka import (  # noqa: E402
     GRIPPER_CLOSE,
     GRIPPER_OPEN,
     LEFT_HAND_POSE,

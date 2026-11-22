@@ -3,22 +3,19 @@
 World frame: +x points from the arms toward the subject, +y to the left, z = 0 is the table top.
 The left arm (+y) holds the camera and the right arm (-y) presses the shutter button. Both arms
 face the table centre. Stock Isaac Lab MDP terms are used, except the lens aim error from
-common/camera.py. The helpers after ActionsCfg build 16D actions in its order.
+common/camera.py. Robot, wrist-camera, and 16D action definitions live in common/franka.py.
 """
 
 import math
 from pathlib import Path
 
-import torch
 from isaaclab_physx.physics import PhysxCfg
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
-from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
-from isaaclab.envs.mdp.actions.actions_cfg import DifferentialInverseKinematicsActionCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -30,12 +27,9 @@ from isaaclab.utils import configclass
 
 from isaaclab_tasks.utils.presets import set_isaac_rtx_global_settings
 
-from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
-
-from common import camera, frames
+from common import camera, frames, franka
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
-FRANKA_USD = ASSET_DIR / "franka_panda" / "panda_instanceable.usd"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
 TABLE_USD = ASSET_DIR / "packing_table" / "SM_HeavyDutyPackingTable_C02_01_physics.usd"
 
@@ -50,58 +44,6 @@ SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; f
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
 IMAGE_SIZE = 224  # OpenPi's input resolution, so frames need no resizing
-# libfranka's "ready" pose, with the hand pointing straight down. Isaac Lab's default tilts it by 45 degrees.
-FRANKA_READY_JOINT_POS = {
-    "panda_joint1": 0.0,
-    "panda_joint2": -math.pi / 4,
-    "panda_joint3": 0.0,
-    "panda_joint4": -3 * math.pi / 4,
-    "panda_joint5": 0.0,
-    "panda_joint6": math.pi / 2,
-    "panda_joint7": math.pi / 4,
-    "panda_finger_joint.*": 0.04,
-}
-
-
-def _yaw_quat(yaw_deg: float) -> tuple[float, float, float, float]:
-    """Return the xyzw quaternion for a rotation about +z."""
-    half = math.radians(yaw_deg) / 2
-    return (0.0, 0.0, math.sin(half), math.cos(half))
-
-
-def _look_at_quat(eye, target) -> tuple[float, float, float, float]:
-    """Return the xyzw quaternion that points a world-convention camera (+x forward, +z up) at target."""
-    dx, dy, dz = (t - e for t, e in zip(target, eye))
-    half_yaw = math.atan2(dy, dx) / 2
-    half_pitch = math.atan2(-dz, math.hypot(dx, dy)) / 2
-    cy, sy = math.cos(half_yaw), math.sin(half_yaw)
-    cp, sp = math.cos(half_pitch), math.sin(half_pitch)
-    return (-sy * sp, cy * sp, sy * cp, cy * cp)
-
-
-def _franka_cfg(prim_name: str, base_y: float, yaw_deg: float) -> ArticulationCfg:
-    """Franka Panda with its hand, loaded from the local asset copy and placed on the table top."""
-    return FRANKA_PANDA_HIGH_PD_CFG.replace(
-        prim_path=f"{{ENV_REGEX_NS}}/{prim_name}",
-        spawn=FRANKA_PANDA_HIGH_PD_CFG.spawn.replace(usd_path=str(FRANKA_USD)),
-        init_state=FRANKA_PANDA_HIGH_PD_CFG.init_state.replace(
-            pos=(0.0, base_y, 0.0), rot=_yaw_quat(yaw_deg), joint_pos=FRANKA_READY_JOINT_POS
-        ),
-    )
-
-
-def _wrist_cam_cfg(robot_prim_name: str) -> CameraCfg:
-    """Wrist camera on panda_hand, using the mount pose of Isaac Lab's Franka visuomotor task."""
-    return CameraCfg(
-        prim_path=f"{{ENV_REGEX_NS}}/{robot_prim_name}/panda_hand/wrist_cam",
-        height=IMAGE_SIZE,
-        width=IMAGE_SIZE,
-        data_types=["rgb"],
-        spawn=sim_utils.PinholeCameraCfg(focal_length=24.0, horizontal_aperture=20.955, clipping_range=(0.05, 3.0)),
-        offset=CameraCfg.OffsetCfg(
-            pos=(0.13, 0.0, -0.15), rot=(0.03701, 0.03701, -0.70614, -0.70614), convention="ros"
-        ),
-    )
 
 
 def _rgb_obs(camera_name: str) -> ObsTerm:
@@ -127,7 +69,7 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     # The table USD is authored in centimetres with its long side along x; turn that side along y.
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_POS, rot=_yaw_quat(90.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_POS, rot=frames.yaw_quat(90.0)),
         spawn=sim_utils.UsdFileCfg(usd_path=str(TABLE_USD), scale=(0.01, 0.01, 0.01)),
     )
     # Visual-only target the camera should aim at (no collision properties).
@@ -139,8 +81,8 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    robot_left = _franka_cfg("RobotLeft", base_y=ARM_BASE_Y, yaw_deg=-90.0)
-    robot_right = _franka_cfg("RobotRight", base_y=-ARM_BASE_Y, yaw_deg=90.0)
+    robot_left = franka.arm_cfg("RobotLeft", pos=(0.0, ARM_BASE_Y, 0.0), yaw_deg=-90.0)
+    robot_right = franka.arm_cfg("RobotRight", pos=(0.0, -ARM_BASE_Y, 0.0), yaw_deg=90.0)
 
     camera_prop = ArticulationCfg(
         prim_path="{ENV_REGEX_NS}/CameraProp",
@@ -159,11 +101,11 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(focal_length=18.0, horizontal_aperture=20.955, clipping_range=(0.05, 5.0)),
         offset=CameraCfg.OffsetCfg(
-            pos=TABLE_CAM_EYE, rot=_look_at_quat(TABLE_CAM_EYE, TABLE_CAM_TARGET), convention="world"
+            pos=TABLE_CAM_EYE, rot=frames.look_at_quat(TABLE_CAM_EYE, TABLE_CAM_TARGET), convention="world"
         ),
     )
-    left_wrist_cam = _wrist_cam_cfg("RobotLeft")
-    right_wrist_cam = _wrist_cam_cfg("RobotRight")
+    left_wrist_cam = franka.wrist_cam_cfg("RobotLeft", image_size=IMAGE_SIZE)
+    right_wrist_cam = franka.wrist_cam_cfg("RobotRight", image_size=IMAGE_SIZE)
     # The photo the camera prop would take: a 50 mm lens on 36 mm film, looking along the lens (+x).
     lens_cam = CameraCfg(
         prim_path="{ENV_REGEX_NS}/CameraProp/body/lens_cam",
@@ -173,55 +115,6 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.PinholeCameraCfg(focal_length=50.0, horizontal_aperture=36.0, clipping_range=(0.01, 5.0)),
         offset=CameraCfg.OffsetCfg(pos=LENS_FRONT, rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
     )
-
-
-def _hand_pose_action(robot_name: str) -> DifferentialInverseKinematicsActionCfg:
-    """Absolute panda_hand pose target (xyz + xyzw quaternion) in the arm's base frame, solved by IK."""
-    return DifferentialInverseKinematicsActionCfg(
-        asset_name=robot_name,
-        joint_names=["panda_joint.*"],
-        body_name="panda_hand",
-        controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
-    )
-
-
-def _gripper_action(robot_name: str) -> mdp.BinaryJointPositionActionCfg:
-    """One gripper command: negative closes, zero or positive opens."""
-    return mdp.BinaryJointPositionActionCfg(
-        asset_name=robot_name,
-        joint_names=["panda_finger.*"],
-        open_command_expr={"panda_finger_.*": 0.04},
-        close_command_expr={"panda_finger_.*": 0.0},
-    )
-
-
-@configclass
-class ActionsCfg:
-    """16D action, in this order: left hand pose 7, left gripper 1, right hand pose 7, right gripper 1."""
-
-    left_arm = _hand_pose_action("robot_left")
-    left_gripper = _gripper_action("robot_left")
-    right_arm = _hand_pose_action("robot_right")
-    right_gripper = _gripper_action("robot_right")
-
-
-GRIPPER_OPEN, GRIPPER_CLOSE = 1.0, -1.0
-LEFT_HAND_POSE, RIGHT_HAND_POSE = slice(0, 7), slice(8, 15)  # where each hand pose sits in the 16D action
-
-
-def compose_action(
-    left_pose: torch.Tensor, left_gripper: float, right_pose: torch.Tensor, right_gripper: float
-) -> torch.Tensor:
-    """Concatenate a 16D action in ActionsCfg order from (num_envs, 7) hand poses and gripper commands."""
-    gripper = lambda value: torch.full((left_pose.shape[0], 1), value, device=left_pose.device)  # noqa: E731
-    return torch.cat([left_pose, gripper(left_gripper), right_pose, gripper(right_gripper)], dim=-1)
-
-
-def hold_current_pose_action(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """16D action that keeps both hands where they are, with both grippers open."""
-    left_pose = frames.body_pose_in_base(env.scene["robot_left"], "panda_hand")
-    right_pose = frames.body_pose_in_base(env.scene["robot_right"], "panda_hand")
-    return compose_action(left_pose, GRIPPER_OPEN, right_pose, GRIPPER_OPEN)
 
 
 @configclass
@@ -287,7 +180,7 @@ class TerminationsCfg:
 class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
     scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=1, env_spacing=3.0)
     observations: ObservationsCfg = ObservationsCfg()
-    actions: ActionsCfg = ActionsCfg()
+    actions: franka.BimanualActionsCfg = franka.BimanualActionsCfg()
     events: EventsCfg = EventsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     rewards = None
