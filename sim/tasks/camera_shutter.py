@@ -31,9 +31,8 @@ from common import camera, frames, franka
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
-SCENE_USD = Path(__file__).resolve().parents[1] / "scenes" / "camera_shutter.usda"  # table, rack, and subject
+SCENE_USD = Path(__file__).resolve().parents[1] / "scenes" / "camera_shutter.usda"  # floor, table, rack, subject
 
-TABLE_HEIGHT = 0.994  # floor to table top, as laid out in SCENE_USD
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
@@ -50,17 +49,8 @@ def _rgb_obs(camera_name: str) -> ObsTerm:
 
 @configclass
 class CameraShutterSceneCfg(InteractiveSceneCfg):
-    """Floor, light, the SCENE_USD fixtures, two Franka arms, the camera prop, and four RGB cameras."""
+    """Light, the SCENE_USD fixtures, two Franka arms, the camera prop, and four RGB cameras."""
 
-    floor = AssetBaseCfg(
-        prim_path="/World/Floor",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -TABLE_HEIGHT - 0.01)),
-        spawn=sim_utils.CuboidCfg(
-            size=(8.0, 8.0, 0.02),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.4, 0.4, 0.42)),
-        ),
-    )
     light = AssetBaseCfg(
         prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=2000.0)
     )
@@ -163,7 +153,9 @@ class TerminationsCfg:
 
 @configclass
 class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
-    scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=1, env_spacing=3.0)
+    # env_spacing equals the 5 m floor tile in SCENE_USD, so the floors of cloned envs tile
+    # and the table camera does not see the neighbouring envs.
+    scene: CameraShutterSceneCfg = CameraShutterSceneCfg(num_envs=1, env_spacing=5.0)
     observations: ObservationsCfg = ObservationsCfg()
     actions: franka.BimanualActionsCfg = franka.BimanualActionsCfg()
     events: EventsCfg = EventsCfg()
