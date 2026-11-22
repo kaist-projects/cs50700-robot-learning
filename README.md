@@ -1,6 +1,6 @@
 # Sequential Action Generation for Bimanual Manipulation
 
-KAIST CS577 (Fall 2026), Team 8. Two Franka arms take a photo: the left arm holds a camera and the right arm presses its shutter. We fine-tune π0.5 so that it generates actions in three cumulative stages: hand position, then orientation, then gripper.
+KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right presses its shutter. We fine-tune π0.5 for cumulative action generation (hand position → orientation → gripper motion).
 
 ## Layout
 
