@@ -8,7 +8,7 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 📁 robot-learning/
 ├── 📁 sim/
 │   ├── 📁 assets/   # USD models and textures
-│   ├── 📁 scenes/   # Static workcell layouts
+│   ├── 📁 scenes/   # Prebuilt scenes from USD assets
 │   ├── 📁 tasks/    # Isaac Lab task configs
 │   ├── 📁 common/   # Shared simulation code
 │   └── 📁 scripts/  # Simulation launch and tests
