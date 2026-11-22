@@ -4,7 +4,10 @@ Project instructions for coding agents working in this repository.
 
 ## Project
 
-KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Bimanual Manipulation**. We port HAF-VLA (Gu et al., arXiv:2610.26584) from a humanoid to two fixed-base Franka arms with Allegro hands on a bimanual camera-shutter task, splitting π0.5's single-stage flow matching into three cumulative stages (arms, then wrists, then fingers) with a shared VLM prefix and cross-stage KV cache.
+KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Bimanual Manipulation**. We port HAF-VLA (Gu et al., arXiv:2610.26584) from a humanoid to two fixed-base Franka arms on a bimanual camera-shutter task, splitting π0.5's single-stage flow matching into three cumulative stages (hand position, then orientation, then gripper) with a shared VLM prefix and cross-stage KV cache.
+
+- The arms use 1-DoF parallel grippers, not the Allegro hands in the proposal. OpenPi's π0.5 checkpoint has `action_dim=32`, and two Franka arms with Allegro hands need 46. A three-finger hand is the planned next step, so keep the total action at 32 or fewer.
+- The stage split needs end-effector actions (position and orientation are separable there, not in joint space). Training actions are planned as `[L xyz, L rot6d, L grip, R xyz, R rot6d, R grip]` = 20D, converted from the env's 16D pose actions.
 
 ## Reference docs
 
@@ -24,6 +27,10 @@ KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Biman
 
 ## Directory conventions
 
+- One top-level folder per pipeline stage, created when the stage starts: `sim/` (assets and Isaac Lab env), then `collect/`, `train/`, `eval/`. Do not number the folder names.
+- `sim/bimanual_sim` is the single definition of the task, observations, and action layout. Other stages import it with `PYTHONPATH=sim`; never copy env config into another stage.
+- `sim/assets/`: every asset the env loads, committed. The env must not depend on an asset server.
+- Isaac Lab 3.0 differs from older docs: task IDs have no `-v0` suffix, quaternions are (x, y, z, w), and scripts have no `--headless`/`--enable_cameras` flags (headless is the default; pass `enable_cameras=True` to `AppLauncher`).
 - `docs/proposal/`: project proposal and design source of truth.
 - `docs/course/`: course-provided materials (private).
 - `docs/papers/`: reference papers (PDF plus Markdown conversion).
