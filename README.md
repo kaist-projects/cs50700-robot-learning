@@ -54,4 +54,5 @@ The smoke test presses the shutter, reports aim error, shutter travel, and task 
 All assets live in `sim/assets/`, so the environment needs no asset server.
 
 - `franka_panda/`: Isaac Lab's Franka Panda (`Isaac/IsaacLab/Robots/FrankaEmika/Legacy/` from NVIDIA's Isaac 6.1 asset server).
+- `packing_table/`: the heavy-duty work table from Isaac's PackingTable prop (`Isaac/Props/PackingTable/props/SM_HeavyDutyPackingTable_C02_01/` from NVIDIA's Isaac 6.1 asset server), with only the textures its materials use. It is authored in centimetres, so the task scales it by 0.01.
 - `camera_prop/`: a rangefinder camera with a spring-loaded shutter button. `camera.usda` holds the physics (links, joint, colliders). The visuals in `visuals/` come from Poly Haven [Camera 01](https://polyhaven.com/a/Camera_01) (CC0), split in Blender (`source/camera_01_split.blend`).

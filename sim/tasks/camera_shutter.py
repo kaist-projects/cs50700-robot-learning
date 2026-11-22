@@ -37,13 +37,15 @@ from common import camera, frames
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 FRANKA_USD = ASSET_DIR / "franka_panda" / "panda_instanceable.usd"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
+TABLE_USD = ASSET_DIR / "packing_table" / "SM_HeavyDutyPackingTable_C02_01_physics.usd"
 
-TABLE_SIZE = (1.4, 1.4, 0.75)
-TABLE_CENTER = (0.3, 0.0, -TABLE_SIZE[2] / 2)
+TABLE_HEIGHT = 0.994  # floor to table top
+# Table origin is its bottom centre. Its 0.76 m depth runs from just behind the arm bases to x = 0.6.
+TABLE_POS = (0.22, 0.0, -TABLE_HEIGHT)
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
-SUBJECT_POS = (0.9, 0.0, 0.15)
+SUBJECT_POS = (0.55, 0.0, 0.15)  # stands on the table, just inside its front edge
 SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; fully pressed is -0.004
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
@@ -114,7 +116,7 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
 
     floor = AssetBaseCfg(
         prim_path="/World/Floor",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -TABLE_SIZE[2] - 0.01)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -TABLE_HEIGHT - 0.01)),
         spawn=sim_utils.CuboidCfg(
             size=(8.0, 8.0, 0.02),
             collision_props=sim_utils.CollisionPropertiesCfg(),
@@ -124,14 +126,11 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     light = AssetBaseCfg(
         prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=2000.0)
     )
+    # The table USD is authored in centimetres with its long side along x; turn that side along y.
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_CENTER),
-        spawn=sim_utils.CuboidCfg(
-            size=TABLE_SIZE,
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.55, 0.42, 0.3)),
-        ),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_POS, rot=_yaw_quat(90.0)),
+        spawn=sim_utils.UsdFileCfg(usd_path=str(TABLE_USD), scale=(0.01, 0.01, 0.01)),
     )
     # Visual-only target the camera should aim at (no collision properties).
     subject = AssetBaseCfg(
