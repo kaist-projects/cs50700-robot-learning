@@ -13,8 +13,8 @@
       its 2.47 m side runs along y. Its 0.76 m depth spans x = -0.16 to 0.60.
     - Rack: Isaac's 1 m office rack, about 0.2 m past the table's front edge (x = 0.79 to 1.41).
       Its top shelf is 0.95 m above the floor.
-    - Subject: a visual-only green post (no collider) standing on the rack's top shelf. The task's
-      SUBJECT_POS must match its centre, because the lens aim error is measured to that point.
+    - Subject: a visual-only green post (no collider) standing on the rack's top shelf.
+      The task's lens aim error observation reads its position from this file.
 
     Robots, the camera prop, sensors, and the light stay in the task's Python config."""
 )

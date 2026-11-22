@@ -1,34 +1,43 @@
 """Camera observation terms that Isaac Lab has no stock term for."""
 
 import torch
+from pxr import Usd, UsdGeom
 
 import isaaclab.utils.math as math_utils
 from isaaclab.envs import ManagerBasedEnv
-from isaaclab.managers import SceneEntityCfg
-
-LENS_AXIS_B = (1.0, 0.0, 0.0)  # the lens points along +x of the camera prop's body
+from isaaclab.managers import ManagerTermBase, ObservationTermCfg, SceneEntityCfg
 
 
-def lens_aim_error(
-    env: ManagerBasedEnv,
-    target_pos: tuple[float, float, float],
-    lens_pos_b: tuple[float, float, float],
-    asset_cfg: SceneEntityCfg,
-) -> torch.Tensor:
-    """Angle in radians between the lens axis and the line from the lens to `target_pos`.
+class lens_aim_error(ManagerTermBase):
+    """Angle in radians between a camera's view axis and the line from the camera to a target prim.
 
-    `target_pos` is in the env frame and `lens_pos_b` in the frame of the body in `asset_cfg`.
+    Params: `sensor_cfg` names the camera, whose view axis is its +x in Isaac Lab's world convention.
+    `target_prim` is a prim path relative to each env, such as "Scene/Subject". Its position is read
+    once from env 0, so the scene USD stays the only place the target is placed.
     Returns shape (num_envs, 1); 0 means the target sits at the image centre.
     """
-    camera = env.scene[asset_cfg.name]
-    body = asset_cfg.body_ids[0]
-    body_pos = camera.data.body_pos_w.torch[:, body] - env.scene.env_origins
-    body_quat = camera.data.body_quat_w.torch[:, body]
-    lens_pos = body_pos + math_utils.quat_apply(body_quat, _per_env(env, lens_pos_b))
-    lens_axis = math_utils.quat_apply(body_quat, _per_env(env, LENS_AXIS_B))
-    cos_angle = torch.nn.functional.cosine_similarity(lens_axis, _per_env(env, target_pos) - lens_pos, dim=-1)
-    return torch.acos(cos_angle.clamp(-1.0, 1.0)).unsqueeze(-1)
+
+    def __init__(self, cfg: ObservationTermCfg, env: ManagerBasedEnv):
+        super().__init__(cfg, env)
+        self._target_pos_e = _prim_position_in_env(env, cfg.params["target_prim"])
+
+    def __call__(self, env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, target_prim: str) -> torch.Tensor:
+        camera = env.scene[sensor_cfg.name].data
+        view_axis = math_utils.quat_apply(camera.quat_w_world.torch, _x_axis(env))
+        to_target = env.scene.env_origins + self._target_pos_e - camera.pos_w.torch
+        cos_angle = torch.nn.functional.cosine_similarity(view_axis, to_target, dim=-1)
+        return torch.acos(cos_angle.clamp(-1.0, 1.0)).unsqueeze(-1)
 
 
-def _per_env(env: ManagerBasedEnv, vec: tuple[float, float, float]) -> torch.Tensor:
-    return torch.tensor(vec, dtype=torch.float32, device=env.device).expand(env.num_envs, 3)
+def _prim_position_in_env(env: ManagerBasedEnv, prim_path_in_env: str) -> torch.Tensor:
+    """Position of a prim under env 0, relative to env 0's origin."""
+    prim_path = f"{env.scene.env_prim_paths[0]}/{prim_path_in_env}"
+    prim = env.sim.stage.GetPrimAtPath(prim_path)
+    if not prim.IsValid():
+        raise ValueError(f"Target prim not found: {prim_path}")
+    pos_w = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
+    return torch.tensor(tuple(pos_w), dtype=torch.float32, device=env.device) - env.scene.env_origins[0]
+
+
+def _x_axis(env: ManagerBasedEnv) -> torch.Tensor:
+    return torch.tensor((1.0, 0.0, 0.0), device=env.device).expand(env.num_envs, 3)
