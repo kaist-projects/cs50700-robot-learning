@@ -1,4 +1,4 @@
-"""Camera-prop observation terms that Isaac Lab has no stock term for."""
+"""Camera observation terms that Isaac Lab has no stock term for."""
 
 import torch
 

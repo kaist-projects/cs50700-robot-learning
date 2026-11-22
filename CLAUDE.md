@@ -28,7 +28,7 @@ KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Biman
 ## Directory conventions
 
 - One top-level folder per pipeline stage, created when the stage starts: `sim/` (assets and Isaac Lab env), then `collect/`, `train/`, `eval/`. Do not number the folder names.
-- `sim/tasks` is the single definition of every task (scene, observations, action layout); importing it registers them. Other stages import it with `PYTHONPATH=sim`; never copy env config into another stage.
+- `sim/tasks` holds one Python file per task (scene, observations, action layout), and `sim/tasks/__init__.py` registers them. Code shared by several tasks goes in `sim/common`. Other stages import both with `PYTHONPATH=sim`; never copy env config into another stage.
 - `sim/assets/`: every asset the env loads, committed. The env must not depend on an asset server.
 - Assets are USD. Visual meshes are exported from Blender (keep the `.blend` under `source/`); physics (rigid bodies, colliders, joints) lives in a small `.usda` that references those visuals, because Blender's USD export carries no physics. Author URDF/MJCF only when a tool outside Isaac needs the asset.
 - Isaac Lab 3.0 differs from older docs: task IDs have no `-v0` suffix, quaternions are (x, y, z, w), and scripts have no `--headless`/`--enable_cameras` flags (headless is the default; pass `enable_cameras=True` to `AppLauncher`).

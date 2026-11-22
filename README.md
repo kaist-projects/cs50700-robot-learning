@@ -9,6 +9,7 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 ├── 📁 sim/        # Isaac Sim 6.2, Isaac Lab 3.0
 │   ├── 📁 assets/
 │   ├── 📁 tasks/
+│   ├── 📁 common/
 │   └── 📁 scripts/
 │       └── 📄 smoke_test.py
 ├── 📁 collect/    # Demo collection (next)
