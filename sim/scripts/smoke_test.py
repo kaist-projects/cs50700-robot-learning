@@ -1,9 +1,8 @@
 """Smoke test for the camera-shutter env.
 
-Holds both hands still, presses the shutter button with the right hand and lifts it again, then
-prints IK tracking error, the lens aim error, the shutter joint travel with the success term, and
-observation shapes. One frame per camera is
-saved at the deepest press.
+Holds both hands still, presses the shutter button with the right hand and lifts it again. Prints
+the lens aim error, the shutter joint travel with the success check, and the observation shapes,
+and saves one frame per camera at the deepest press.
 
 Run from the repository root in the `isaacsim` conda env:
 
@@ -51,20 +50,17 @@ def main():
 
     hold = hold_current_pose_action(env)
     obs = step_for(env, hold, PHASE_STEPS)
-    report_tracking_error(env, hold)
     report_aim_error(obs["policy"])
 
     above_button, into_button = shutter_press_actions(env, hold)
     step_for(env, above_button, PHASE_STEPS)
-    obs = step_for(env, into_button, PHASE_STEPS)
-    pressed, pressed_success = shutter_position(env), is_success(env, success_term)
-    save_camera_frames(obs["policy"], Path(args_cli.out_dir))
-    step_for(env, above_button, PHASE_STEPS)
-    released, released_success = shutter_position(env), is_success(env, success_term)
-    print(f"[smoke] shutter joint: pressed {pressed * 1e3:.1f} mm (success {pressed_success}), "
-          f"released {released * 1e3:.1f} mm (success {released_success})")
+    pressed = step_for(env, into_button, PHASE_STEPS)["policy"]
+    pressed_success = is_success(env, success_term)
+    save_camera_frames(pressed, Path(args_cli.out_dir))
+    released = step_for(env, above_button, PHASE_STEPS)["policy"]
+    report_shutter(pressed, pressed_success, released, is_success(env, success_term))
 
-    print_observation_shapes(obs["policy"])
+    print_observation_shapes(pressed)
     if args_cli.keep_open:
         hold_until_app_closes(env, hold_current_pose_action(env))
     env.close()
@@ -102,14 +98,15 @@ def shutter_press_actions(env: ManagerBasedRLEnv, hold: torch.Tensor) -> tuple[t
     return actions[0], actions[1]
 
 
-def report_tracking_error(env: ManagerBasedRLEnv, commanded: torch.Tensor) -> None:
-    for name, pose_slice in (("robot_left", slice(0, 3)), ("robot_right", slice(8, 11))):
-        error = torch.linalg.norm(hand_pose_in_base(env, name)[:, :3] - commanded[:, pose_slice], dim=-1)
-        print(f"[smoke] {name} hold position error: {error[0].item() * 1e3:.2f} mm")
-
-
 def report_aim_error(policy_obs: dict[str, torch.Tensor]) -> None:
     print(f"[smoke] lens aim error: {math.degrees(policy_obs['lens_aim_error'][0, 0].item()):.1f} deg")
+
+
+def report_shutter(pressed: dict, pressed_success: bool, released: dict, released_success: bool) -> None:
+    """Print the shutter joint travel (0 released, -4 mm fully pressed) and the success check at each end."""
+    pressed_mm, released_mm = (obs["shutter_pos"][0, 0].item() * 1e3 for obs in (pressed, released))
+    print(f"[smoke] shutter joint: pressed {pressed_mm:.1f} mm (success {pressed_success}), "
+          f"released {released_mm:.1f} mm (success {released_success})")
 
 
 def step_for(env: ManagerBasedRLEnv, action: torch.Tensor, steps: int) -> dict:
@@ -147,11 +144,6 @@ def shutter_button_top(env: ManagerBasedRLEnv) -> torch.Tensor:
     camera_prop = env.scene["camera_prop"]
     button = camera_prop.find_bodies("shutter_button")[0][0]
     return camera_prop.data.body_pos_w.torch[:, button] + torch.tensor([0.0, 0.0, BUTTON_TOP_ABOVE_ORIGIN], device=env.device)
-
-
-def shutter_position(env: ManagerBasedRLEnv) -> float:
-    """Shutter joint position in metres: 0 released, -0.004 fully pressed."""
-    return env.scene["camera_prop"].data.joint_pos.torch[0, 0].item()
 
 
 def print_observation_shapes(policy_obs: dict[str, torch.Tensor]) -> None:
