@@ -10,7 +10,7 @@ Outcome:
 
 ## Goal
 
-The current `sim/assets/camera_prop/camera_prop.usda` is a dark box with a red cylinder. Its physics already works: the shutter joint reaches its -4 mm limit under a fingertip press and springs back. We keep that physics skeleton and swap only the visual meshes for a realistic camera.
+The current `sim/assets/camera_prop/camera.usda` is a dark box with a red cylinder. Its physics already works: the shutter joint reaches its -4 mm limit under a fingertip press and springs back. We keep that physics skeleton and swap only the visual meshes for a realistic camera.
 
 ## Asset search (done)
 
@@ -34,8 +34,8 @@ The current `sim/assets/camera_prop/camera_prop.usda` is a dark box with a red c
 ## Steps
 
 1. **Blender edit.** Open the 1k `.blend`, delete the strap, and separate the button island into an object `shutter_button`. Rotate both objects +90° about z so the lens points along +x, which is the prop frame the env uses. Put the body origin at the bottom centre of the main body and the button origin at the bottom centre of the button, then apply transforms. Save the edited `.blend` as the source file.
-2. **Export.** Export `camera_body.usdc` and `shutter_button.usdc` separately with UsdPreviewSurface materials and textures copied beside them. One file per object keeps each file's materials inside the prim that `camera_prop.usda` references.
-3. **Physics skeleton.** In `camera_prop.usda`, make the `body` and `shutter_button` links reference the exported visuals. Refit the primitive colliders to the real body (a box of about 35 × 137 × 77 mm in the prop frame, plus a lens cylinder of about 52 mm diameter) and hide them from rendering. Move the joint's `localPos0` to the button's rest position. Keep the 4 mm travel and the spring unless we decide otherwise.
+2. **Export.** Export `camera_body.usdc` and `shutter_button.usdc` separately with UsdPreviewSurface materials and textures copied beside them. One file per object keeps each file's materials inside the prim that `camera.usda` references.
+3. **Physics skeleton.** In `camera.usda`, make the `body` and `shutter_button` links reference the exported visuals. Refit the primitive colliders to the real body (a box of about 35 × 137 × 77 mm in the prop frame, plus a lens cylinder of about 52 mm diameter) and hide them from rendering. Move the joint's `localPos0` to the button's rest position. Keep the 4 mm travel and the spring unless we decide otherwise.
 4. **Env update.** Set `CAMERA_PROP_START` for the new origin (bottom centre, so z ≈ 0), and update the smoke test's button-top offset to the new button height.
 5. **Verify.** The smoke test must show the shutter at its limit when pressed and back near 0 when released. The table and wrist frames must show the textured camera. Then check the scene in the GUI.
 6. **Docs and commits.** Record the provenance in the README asset list (Poly Haven `Camera_01`, CC0, author Rajil Jose Macatangay). Commit the asset change and the env change separately.
@@ -44,7 +44,7 @@ The current `sim/assets/camera_prop/camera_prop.usda` is a dark box with a red c
 
 ```
 📁 sim/assets/camera_prop/
-├── 📄 camera_prop.usda          # physics skeleton (links, joint, colliders) + references to visuals
+├── 📄 camera.usda               # physics skeleton (links, joint, colliders) + references to visuals
 ├── 📁 visuals/                  # camera_body.usdc, shutter_button.usdc, textures/
 └── 📁 source/                   # edited Camera_01 .blend
 ```

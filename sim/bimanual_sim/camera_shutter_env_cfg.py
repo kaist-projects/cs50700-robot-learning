@@ -32,7 +32,7 @@ from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG  # isort: ski
 
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 FRANKA_USD = ASSET_DIR / "franka_panda" / "panda_instanceable.usd"
-CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera_prop.usda"
+CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
 
 TABLE_SIZE = (1.4, 1.4, 0.75)
 TABLE_CENTER = (0.3, 0.0, -TABLE_SIZE[2] / 2)
