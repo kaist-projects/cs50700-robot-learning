@@ -31,6 +31,7 @@ KAIST CS577 (Fall 2026) Team 8 project: **Sequential Action Generation for Biman
 - `sim/tasks` holds one Python file per task (scene, observations, action layout), and `sim/tasks/__init__.py` registers them. Code shared by several tasks goes in `sim/common`. Other stages import both with `PYTHONPATH=sim`; never copy env config into another stage.
 - `sim/assets/`: every asset the env loads, committed. The env must not depend on an asset server.
 - Assets are USD. Visual meshes are exported from Blender (keep the `.blend` under `source/`); physics (rigid bodies, colliders, joints) lives in a small `.usda` that references those visuals, because Blender's USD export carries no physics. Author URDF/MJCF only when a tool outside Isaac needs the asset.
+- Versions are pinned for the team: Isaac Lab v3.0.0 as the `third_party/IsaacLab` submodule, and Isaac Sim 6.2.0 plus torch in `environment.yml`. Change them only together, in one commit, matching the `[tool.isaaclab.versions]` table in the submodule's `pyproject.toml`, and rerun the smoke test.
 - Isaac Lab 3.0 differs from older docs: task IDs have no `-v0` suffix, quaternions are (x, y, z, w), and scripts have no `--headless`/`--enable_cameras` flags (headless is the default; pass `enable_cameras=True` to `AppLauncher`).
 - `docs/proposal/`: project proposal and design source of truth.
 - `docs/course/`: course-provided materials (private).

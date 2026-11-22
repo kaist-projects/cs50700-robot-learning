@@ -105,9 +105,7 @@ def _wrist_cam_cfg(robot_prim_name: str) -> CameraCfg:
 
 
 def _rgb_obs(camera_name: str) -> ObsTerm:
-    return ObsTerm(
-        func=mdp.image, params={"sensor_cfg": SceneEntityCfg(camera_name), "data_type": "rgb", "normalize": False}
-    )
+    return ObsTerm(func=mdp.image_rgb, params={"sensor_cfg": SceneEntityCfg(camera_name), "normalize": False})
 
 
 @configclass

@@ -6,8 +6,8 @@ and saves one frame per camera at the deepest press.
 
 Run from the repository root in the `isaacsim` conda env:
 
-    PYTHONPATH=sim python sim/scripts/smoke_test.py
-    PYTHONPATH=sim python sim/scripts/smoke_test.py --viz kit --keep_open   # GUI window
+    python sim/scripts/smoke_test.py
+    python sim/scripts/smoke_test.py --viz kit --keep_open   # GUI window
 """
 
 import argparse

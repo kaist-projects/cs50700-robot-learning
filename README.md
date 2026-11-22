@@ -15,7 +15,23 @@ KAIST CS577 (Fall 2026), Team 8. The left Franka holds a camera, and the right p
 ├── 📁 collect/    # Demo collection (next)
 ├── 📁 train/      # π0.5 fine-tuning (later)
 ├── 📁 docs/
+├── 📁 third_party/
+│   └── 📁 IsaacLab/  # v3.0.0, git submodule
+├── 📄 environment.yml
 └── 📄 README.md
+```
+
+## Setup
+
+Requires Linux with an NVIDIA RTX GPU, Isaac Sim 6.2.0 (`environment.yml`), and Isaac Lab v3.0.0 (`third_party/IsaacLab` submodule).
+
+```bash
+git clone --recursive https://github.com/kaist-projects/cs50700-robot-learning.git
+cd cs50700-robot-learning
+conda env create -f environment.yml
+conda activate isaacsim
+# Install Isaac Lab in the active Conda environment
+./third_party/IsaacLab/isaaclab.sh -i
 ```
 
 ## Simulation environment
@@ -43,8 +59,8 @@ Run the smoke test from the repository root:
 
 ```bash
 conda activate isaacsim
-PYTHONPATH=sim python sim/scripts/smoke_test.py                        # headless
-PYTHONPATH=sim python sim/scripts/smoke_test.py --viz kit --keep_open  # GUI window
+python sim/scripts/smoke_test.py                        # headless
+python sim/scripts/smoke_test.py --viz kit --keep_open  # GUI window
 ```
 
 The smoke test presses the shutter, reports aim error, shutter travel, and task success, and saves RGB frames to `sim/outputs/smoke/`. The GUI command requires a desktop session and keeps the window open until you close it.
