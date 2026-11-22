@@ -33,7 +33,7 @@ import isaaclab.utils.math as math_utils  # noqa: E402
 from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
-CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam")
+CAMERA_TERMS = ("table_cam", "left_wrist_cam", "right_wrist_cam", "lens_cam")
 OPEN, CLOSE = 1.0, -1.0
 FINGERTIP_BELOW_HAND = 0.1034  # panda_hand origin to fingertip, with the hand pointing down
 BUTTON_TOP_ABOVE_ORIGIN = 0.0048  # the button link origin is the bottom of the button head

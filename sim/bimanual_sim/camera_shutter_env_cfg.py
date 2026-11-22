@@ -38,6 +38,7 @@ TABLE_SIZE = (1.4, 1.4, 0.75)
 TABLE_CENTER = (0.3, 0.0, -TABLE_SIZE[2] / 2)
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
+LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
 SUBJECT_POS = (0.9, 0.0, 0.15)
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
@@ -104,7 +105,7 @@ def _rgb_obs(camera_name: str) -> ObsTerm:
 
 @configclass
 class CameraShutterSceneCfg(InteractiveSceneCfg):
-    """Table, two Franka arms, the camera prop, a subject to aim at, and three RGB cameras."""
+    """Table, two Franka arms, the camera prop, a subject to aim at, and four RGB cameras."""
 
     floor = AssetBaseCfg(
         prim_path="/World/Floor",
@@ -161,6 +162,15 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
     )
     left_wrist_cam = _wrist_cam_cfg("RobotLeft")
     right_wrist_cam = _wrist_cam_cfg("RobotRight")
+    # The photo the camera prop would take: a 50 mm lens on 36 mm film, looking along the lens (+x).
+    lens_cam = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/CameraProp/body/lens_cam",
+        height=IMAGE_SIZE,
+        width=IMAGE_SIZE,
+        data_types=["rgb"],
+        spawn=sim_utils.PinholeCameraCfg(focal_length=50.0, horizontal_aperture=36.0, clipping_range=(0.01, 5.0)),
+        offset=CameraCfg.OffsetCfg(pos=LENS_FRONT, rot=(0.0, 0.0, 0.0, 1.0), convention="world"),
+    )
 
 
 def _hand_pose_action(robot_name: str) -> DifferentialInverseKinematicsActionCfg:
@@ -214,6 +224,7 @@ class ObservationsCfg:
         table_cam = _rgb_obs("table_cam")
         left_wrist_cam = _rgb_obs("left_wrist_cam")
         right_wrist_cam = _rgb_obs("right_wrist_cam")
+        lens_cam = _rgb_obs("lens_cam")
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -261,5 +272,6 @@ class CameraShutterEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (-1.2, 0.0, 1.0)
         self.viewer.lookat = (0.4, 0.0, 0.1)
         self.num_rerenders_on_reset = 3
-        for camera_cfg in (self.scene.table_cam, self.scene.left_wrist_cam, self.scene.right_wrist_cam):
+        scene = self.scene
+        for camera_cfg in (scene.table_cam, scene.left_wrist_cam, scene.right_wrist_cam, scene.lens_cam):
             set_isaac_rtx_global_settings(camera_cfg.renderer_cfg, antialiasing_mode="DLAA")
