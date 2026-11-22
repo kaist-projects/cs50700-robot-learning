@@ -30,6 +30,12 @@ In `Bimanual-CameraShutter-Franka`, the left arm holds and aims the camera at a 
 | Table | A fixed worktable with the arms mounted opposite each other |
 | RGB views | Table overview, one view from each wrist, and the camera's lens view |
 
+![Two Franka Panda arms with parallel grippers facing each other across the Isaac Lab worktable](docs/images/readme/franka-panda-workcell.png)
+
+| Camera prop in Blender | Parallel gripper pressing the shutter in Isaac Lab |
+| --- | --- |
+| ![Camera 01 rangefinder with the lens and shutter button visible](docs/images/readme/camera-prop.png) | ![Close-up of the Franka Panda gripper pressing the camera's shutter button](docs/images/readme/shutter-press.png) |
+
 See the action and observation layouts in the [task configuration](sim/tasks/camera_shutter.py).
 
 Run the smoke test from the repository root:
