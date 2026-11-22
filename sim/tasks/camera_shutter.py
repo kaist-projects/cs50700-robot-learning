@@ -32,14 +32,18 @@ from common import camera, frames, franka
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CAMERA_PROP_USD = ASSET_DIR / "camera_prop" / "camera.usda"
 TABLE_USD = ASSET_DIR / "packing_table" / "SM_HeavyDutyPackingTable_C02_01_physics.usd"
+RACK_USD = ASSET_DIR / "office_rack" / "Props" / "SM_Rack1m.usd"
 
 TABLE_HEIGHT = 0.994  # floor to table top
 # Table origin is its bottom centre. Its 0.76 m depth runs from just behind the arm bases to x = 0.6.
 TABLE_POS = (0.22, 0.0, -TABLE_HEIGHT)
+RACK_SHELF_HEIGHT = 0.95  # floor to the rack's top shelf
+# Rack origin is its bottom centre. Its 0.61 m depth starts about 0.2 m past the table's front edge.
+RACK_POS = (1.1, 0.0, -TABLE_HEIGHT)
 ARM_BASE_Y = 0.5
 CAMERA_PROP_START = (0.35, 0.15, 0.001)  # prop origin is its bottom centre
 LENS_FRONT = (0.071, 0.0099, 0.0338)  # 1 mm ahead of the lens glass, in the camera prop's body frame
-SUBJECT_POS = (0.55, 0.0, 0.15)  # stands on the table, just inside its front edge
+SUBJECT_POS = (1.1, 0.0, RACK_SHELF_HEIGHT - TABLE_HEIGHT + 0.15)  # centre of the 0.3 m post on the top shelf
 SHUTTER_PRESSED_POS = -0.003  # shutter joint position that counts as a press; fully pressed is -0.004
 TABLE_CAM_EYE = (-0.3, 0.0, 1.5)
 TABLE_CAM_TARGET = (0.4, 0.0, 0.05)
@@ -52,7 +56,7 @@ def _rgb_obs(camera_name: str) -> ObsTerm:
 
 @configclass
 class CameraShutterSceneCfg(InteractiveSceneCfg):
-    """Table, two Franka arms, the camera prop, a subject to aim at, and four RGB cameras."""
+    """Table, two Franka arms, the camera prop, a subject on a rack to aim at, and four RGB cameras."""
 
     floor = AssetBaseCfg(
         prim_path="/World/Floor",
@@ -72,7 +76,12 @@ class CameraShutterSceneCfg(InteractiveSceneCfg):
         init_state=AssetBaseCfg.InitialStateCfg(pos=TABLE_POS, rot=frames.yaw_quat(90.0)),
         spawn=sim_utils.UsdFileCfg(usd_path=str(TABLE_USD), scale=(0.01, 0.01, 0.01)),
     )
-    # Visual-only target the camera should aim at (no collision properties).
+    rack = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Rack",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=RACK_POS),
+        spawn=sim_utils.UsdFileCfg(usd_path=str(RACK_USD)),
+    )
+    # Visual-only target the camera should aim at (no collision properties), standing on the rack.
     subject = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Subject",
         init_state=AssetBaseCfg.InitialStateCfg(pos=SUBJECT_POS),
